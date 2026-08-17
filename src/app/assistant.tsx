@@ -13,11 +13,12 @@ import {
 } from "@assistant-ui/react";
 import {
   AssistantChatTransport,
-  useChatRuntime,
+  useAISDKRuntime,
 } from "@assistant-ui/react-ai-sdk";
-import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import { useChat } from "@ai-sdk/react";
+import { lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
 import { BarChart3, CheckCircle2, Send, ShieldAlert } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Thread } from "@/components/thread";
 import { Button } from "@/components/ui/button";
@@ -208,13 +209,30 @@ function FileAnalysisDataRenderer() {
   return null;
 }
 
-export const Assistant = () => {
-  const runtime = useChatRuntime({
+type AssistantProps = {
+  conversationId?: string;
+  initialMessages: UIMessage[];
+};
+
+export const Assistant = ({ conversationId, initialMessages }: AssistantProps) => {
+  const [newConversationId] = useState(() => crypto.randomUUID());
+  const activeConversationId = conversationId ?? newConversationId;
+  const transport = useMemo(() => new AssistantChatTransport({
+    api: "/api/chat",
+    body: { conversationId: activeConversationId },
+  }), [activeConversationId]);
+  const chat = useChat({
+    id: activeConversationId,
+    messages: initialMessages,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    transport,
+    onFinish: () => {
+      window.history.replaceState(null, "", `/?conversation=${encodeURIComponent(activeConversationId)}`);
+      window.dispatchEvent(new Event("iconic:conversation-updated"));
+    },
+  });
+  const runtime = useAISDKRuntime(chat, {
     adapters: { attachments: attachmentAdapter },
-    transport: new AssistantChatTransport({
-      api: "/api/chat",
-    }),
   });
   return (
     <AssistantRuntimeProvider runtime={runtime} config={AuiConfig({})}>

@@ -5,11 +5,11 @@ import type { UIMessage } from "ai";
 import { activityStorage } from "@/db/activity-storage";
 import type { AnswerSource, ConversationMessage, StoredAttachment } from "@/db/activity-types";
 
-const USER_COOKIE = "iconic_demo_user";
+export const DEMO_USER_COOKIE = "iconic_demo_user";
 const MAX_IDENTIFIER_LENGTH = 128;
 const UPLOAD_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function validIdentifier(value: string | undefined) {
+export function isValidDemoIdentifier(value: string | undefined) {
   return Boolean(value && /^[A-Za-z0-9_-]{12,128}$/.test(value));
 }
 
@@ -57,7 +57,7 @@ function titleFromMessages(messages: UIMessage[]) {
 
 function sessionCookie(userId: string) {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${USER_COOKIE}=${encodeURIComponent(userId)}; Path=/; Max-Age=2592000; SameSite=Lax${secure}`;
+  return `${DEMO_USER_COOKIE}=${encodeURIComponent(userId)}; Path=/; Max-Age=2592000; SameSite=Lax${secure}`;
 }
 
 export type ChatPersistence = {
@@ -68,8 +68,8 @@ export type ChatPersistence = {
 };
 
 export async function getDemoUserForRequest(request: Request) {
-  const cookieUser = cookieValue(request, USER_COOKIE);
-  const userId = validIdentifier(cookieUser) ? cookieUser! : `demo_${crypto.randomUUID()}`;
+  const cookieUser = cookieValue(request, DEMO_USER_COOKIE);
+  const userId = isValidDemoIdentifier(cookieUser) ? cookieUser! : `demo_${crypto.randomUUID()}`;
   await activityStorage.ensureUser(userId);
   return {
     userId,
@@ -84,7 +84,7 @@ export async function beginChatPersistence(
 ): Promise<ChatPersistence> {
   const { userId, setCookie } = await getDemoUserForRequest(request);
 
-  let conversationId = typeof requestedConversationId === "string" && validIdentifier(requestedConversationId)
+  let conversationId = typeof requestedConversationId === "string" && isValidDemoIdentifier(requestedConversationId)
     ? requestedConversationId
     : crypto.randomUUID();
   const existing = await activityStorage.getConversation(conversationId);

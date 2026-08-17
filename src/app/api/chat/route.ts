@@ -230,7 +230,7 @@ async function safeModeResponse(
 }
 
 export async function POST(request: Request) {
-  const body: { id?: unknown; messages?: UIMessage[]; system?: string } = await request.json();
+  const body: { id?: unknown; conversationId?: unknown; messages?: UIMessage[]; system?: string } = await request.json();
   const messages = body.messages ?? [];
   const images = latestUserImages(messages);
   const documents = latestUserDocuments(messages);
@@ -242,7 +242,11 @@ export async function POST(request: Request) {
 
   if (!question) return Response.json({ error: "กรุณาระบุคำถาม" }, { status: 400 });
 
-  const persistence = await beginChatPersistence(request, body.id, messages);
+  const persistence = await beginChatPersistence(
+    request,
+    typeof body.conversationId === "string" ? body.conversationId : body.id,
+    messages,
+  );
   let prepared: Awaited<ReturnType<typeof prepareModelMessages>>;
   try {
     prepared = await prepareModelMessages(messages, persistence.userId, persistence.conversationId);

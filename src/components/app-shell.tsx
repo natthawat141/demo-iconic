@@ -14,7 +14,7 @@ import {
   MessageSquareText,
   MessagesSquare,
   Moon,
-  PanelLeftClose,
+  Plus,
   RotateCcw,
   Settings2,
   ShieldCheck,
@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type PropsWithChildren } from "react";
+import { useCallback, useEffect, useState, type PropsWithChildren } from "react";
 
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -54,11 +54,90 @@ const adminNavigation = [
   { href: "/gaps", label: "คำถามที่รอคำตอบ", icon: ListTodo },
 ];
 
-const recentThreads = [
-  "แนวทางติดตามลูกค้า",
-  "รับมือข้อกังวลก่อนตัดสินใจ",
-  "ข้อมูลที่ห้ามใส่ใน Knowledge",
-];
+type ConversationSummary = {
+  id: string;
+  title: string;
+  updatedAt: string;
+};
+
+async function requestConversationHistory() {
+  const response = await fetch("/api/conversations", { cache: "no-store" });
+  if (!response.ok) throw new Error("โหลดประวัติการสนทนาไม่สำเร็จ");
+  const payload = await response.json() as { conversations?: ConversationSummary[] };
+  return payload.conversations ?? [];
+}
+
+function historyTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+}
+
+function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
+  const router = useRouter();
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refreshHistory = useCallback(async () => {
+    try {
+      const items = await requestConversationHistory();
+      setConversations(items);
+    } catch {
+      // The chat itself remains available even if the history request is transiently unavailable.
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const initialRefresh = window.setTimeout(() => void refreshHistory(), 0);
+    const refresh = () => void refreshHistory();
+    window.addEventListener("iconic:conversation-updated", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.removeEventListener("iconic:conversation-updated", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [refreshHistory]);
+
+  function startNewConversation() {
+    onNavigate();
+    router.push(`/?new=${crypto.randomUUID()}`);
+  }
+
+  return (
+    <section className="mt-7" aria-label="บทสนทนาล่าสุด">
+      <div className="mb-2 flex items-center justify-between px-2">
+        <p className="text-[11px] font-semibold text-muted-foreground">บทสนทนาล่าสุด</p>
+        <Button type="button" variant="ghost" size="icon" className="size-7" onClick={startNewConversation} aria-label="เริ่มบทสนทนาใหม่" title="เริ่มแชตใหม่">
+          <Plus className="size-3.5" />
+        </Button>
+      </div>
+      <div className="space-y-0.5" aria-live="polite" aria-busy={loading}>
+        {loading ? (
+          <p className="px-2.5 py-2 text-xs text-muted-foreground">กำลังโหลด...</p>
+        ) : conversations.length === 0 ? (
+          <p className="px-2.5 py-2 text-xs leading-5 text-muted-foreground">เริ่มถามเพื่อเก็บบทสนทนาไว้ที่นี่</p>
+        ) : conversations.map((conversation) => (
+          <Link
+            key={conversation.id}
+            href={`/?conversation=${encodeURIComponent(conversation.id)}`}
+            onClick={onNavigate}
+            className="group flex min-h-10 items-center gap-2 rounded-lg px-2.5 text-left text-xs text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-sidebar-ring/25"
+            title={conversation.title}
+          >
+            <MessageSquareText className="size-3.5 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">{conversation.title}</span>
+              <span className="mt-0.5 block text-[10px] text-muted-foreground">{historyTimestamp(conversation.updatedAt)}</span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function isCurrent(pathname: string, href: string) {
   return href === "/" ? pathname === href : pathname.startsWith(href);
@@ -196,20 +275,7 @@ export function AppShell({
         </nav>
 
         {!adminMode ? (
-          <section className="mt-7" aria-label="บทสนทนาล่าสุด">
-            <div className="mb-2 flex items-center justify-between px-2">
-              <p className="text-[11px] font-semibold text-muted-foreground">ล่าสุด</p>
-              <PanelLeftClose className="size-3.5 text-muted-foreground" aria-hidden="true" />
-            </div>
-            <div className="space-y-0.5">
-              {recentThreads.map((thread) => (
-                <button key={thread} type="button" className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground" title="ตัวอย่างประวัติสนทนา">
-                  <MessageSquareText className="size-3.5 shrink-0" />
-                  <span className="truncate">{thread}</span>
-                </button>
-              ))}
-            </div>
-          </section>
+          <MemberConversationHistory onNavigate={() => setMenuOpen(false)} />
         ) : (
           <section className="mt-7 rounded-xl bg-sidebar-accent/55 p-3">
             <div className="flex items-center gap-2 text-xs font-semibold">
