@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nong Fah — ICONIC Knowledge Assistant Demo
 
-## Getting Started
+เดโมผู้ช่วยความรู้ภายในที่แสดงวงจร Knowledge Management ครบตั้งแต่ถาม–ตอบด้วยแหล่งอ้างอิง ไปจนถึงบันทึกคำถามที่ตอบไม่ได้เป็น Knowledge Gap แล้วแปลงเป็นความรู้ใหม่เพื่ออนุมัติและใช้ซ้ำ
 
-First, run the development server:
+## สิ่งที่เดโมทำได้
+
+- แชตภาษาไทยบน `assistant-ui` พร้อมสถานะ grounded/safe demo และ Source Cards
+- ใช้เฉพาะ Knowledge สถานะ `Approved` ในการตอบ
+- สร้าง แก้ไข อนุมัติ เก็บถาวร และกำหนด owner/source/review date
+- รวมคำถามที่ตอบไม่ได้เป็น Knowledge Gaps พร้อมจำนวนครั้งที่ถูกถาม
+- ส่งต่อหัวหน้าทีม แปลง Gap เป็น Draft Knowledge แล้วอนุมัติเพื่อใช้ตอบรอบถัดไป
+- รีเซ็ตข้อมูลกลับสู่ sales-demo scenario ได้ในคลิกเดียว
+
+ข้อมูล seed ทั้งหมดเป็นข้อมูลสมมติสำหรับเดโม ไม่ใช่นโยบายจริงของ ICONIC
+
+## เริ่มใช้งาน
+
+ต้องมี Node.js 20+ และ pnpm
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+pnpm db:seed
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+เปิด [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## OpenRouter
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+คัดลอก `.env.example` เป็น `.env.local` แล้วใส่ API key ผ่านไฟล์ในเครื่อง:
 
-## Learn More
+```dotenv
+OPENROUTER_API_KEY=your-key
+OPENROUTER_CHAT_MODEL=openai/gpt-4.1-mini
+OPENROUTER_EMBEDDING_MODEL=openai/text-embedding-3-small
+DEMO_SAFE_MODE=false
+```
 
-To learn more about Next.js, take a look at the following resources:
+หากไม่มี key หรือ `DEMO_SAFE_MODE=true` ระบบยังทำงานได้ด้วยคำตอบจาก Knowledge ที่ค้นพบและ local hash embeddings แบบ deterministic เหมาะสำหรับการพรีเซนต์โดยไม่พึ่งอินเทอร์เน็ต
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ตรวจคุณภาพ
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+```
 
-## Deploy on Vercel
+SQLite ถูกเก็บที่ `data/demo.sqlite` และไม่ถูก commit ขึ้น Git ใช้ `pnpm db:seed` หรือปุ่ม “รีเซ็ตเดโม” เพื่อคืนข้อมูลเริ่มต้น
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+อ่านขอบเขตและ acceptance criteria ที่ [DEMO_SPEC.md](./DEMO_SPEC.md)

@@ -5,6 +5,24 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // assistant-ui CLI primitives intentionally use object URLs, native images,
+  // and render-prop component factories. Keep the generated adapter isolated.
+  {
+    files: [
+      "src/components/attachment.tsx",
+      "src/components/file.tsx",
+      "src/components/image.tsx",
+      "src/components/reasoning.tsx",
+      "src/components/thread.tsx",
+    ],
+    rules: {
+      "@next/next/no-img-element": "off",
+      "jsx-a11y/alt-text": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/static-components": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -12,6 +30,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "data/*.sqlite*",
   ]),
 ]);
 

@@ -32,6 +32,21 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# local demo state
+/data/*.sqlite*
+
+# local AI tooling
+/.agent/
+/.claude/
+/.cursor/
+/.gemini/
+/.impeccable/
+
+# discarded local brand experiments
+/public/logo-aion3.png
+/public/logo.png
 
 # vercel
 .vercel

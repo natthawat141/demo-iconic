@@ -1,0 +1,46 @@
+export type KnowledgeStatus = "draft" | "approved" | "archived";
+export type GapStatus = "new" | "escalated" | "resolved" | "dismissed";
+
+export type KnowledgeInput = {
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  sourceLabel: string;
+  ownerName: string;
+  reviewDate?: string | null;
+};
+
+export type KnowledgeStateData = {
+  state: "grounded" | "insufficient" | "fixture";
+  label: string;
+  gapId?: string;
+};
+
+export type KnowledgeItemDto = {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  sourceLabel: string;
+  ownerName: string;
+  status: KnowledgeStatus;
+  reviewDate: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type KnowledgeGapDto = {
+  id: string;
+  question: string;
+  count: number;
+  status: GapStatus;
+  firstAskedAt: string;
+  lastAskedAt: string;
+  resolvedKnowledgeItemId: string | null;
+};
