@@ -83,8 +83,29 @@ function getPostgresPool() {
   if (postgresPool) return postgresPool;
   const connectionString = process.env.POSTGRES_URL?.trim();
   if (!connectionString) throw new Error("POSTGRES_URL is not configured");
-  postgresPool = new Pool({ connectionString, max: 8 });
+  postgresPool = new Pool({
+    connectionString,
+    max: 8,
+    connectionTimeoutMillis: 6_000,
+    idleTimeoutMillis: 30_000,
+  });
   return postgresPool;
+}
+
+function isRecoverablePostgresConnectionError(error: unknown) {
+  const code = typeof error === "object" && error && "code" in error
+    ? String(error.code)
+    : "";
+  const message = error instanceof Error ? error.message : String(error);
+  return new Set(["ECONNRESET", "ECONNREFUSED", "EPIPE", "08000", "08003", "08006", "57P01", "57P02", "57P03"]).has(code) ||
+    /ECONNRESET|ECONNREFUSED|Connection terminated|connection closed|socket hang up/i.test(message);
+}
+
+async function resetPostgresPool() {
+  const stalePool = postgresPool;
+  postgresPool = null;
+  postgresReady = null;
+  await stalePool?.end().catch(() => undefined);
 }
 
 async function ensurePostgresReady() {
@@ -208,7 +229,17 @@ function ensureSqliteReady() {
 }
 
 async function withStore<T>(postgres: () => Promise<T>, local: () => T | Promise<T>) {
-  return process.env.POSTGRES_URL?.trim() ? postgres() : local();
+  if (!process.env.POSTGRES_URL?.trim()) return local();
+  try {
+    return await postgres();
+  } catch (error) {
+    // The local Cloud SQL Auth Proxy can rotate/reconnect underneath a pooled
+    // socket. One retry with a fresh pool keeps a transient reset from taking
+    // down a visible Admin page, without hiding a real database error.
+    if (!isRecoverablePostgresConnectionError(error)) throw error;
+    await resetPostgresPool();
+    return postgres();
+  }
 }
 
 export const activityStorage = {
