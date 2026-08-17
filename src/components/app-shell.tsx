@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type PropsWithChildren } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent, type PropsWithChildren } from "react";
 
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,74 @@ async function requestConversationHistory() {
 function historyTimestamp(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+  return date.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+}
+
+function ConversationHistoryItem({
+  conversation,
+  onNavigate,
+}: {
+  conversation: ConversationSummary;
+  onNavigate: () => void;
+}) {
+  const startX = useRef<number | null>(null);
+  const [revealTime, setRevealTime] = useState(false);
+  const suppressNavigation = useRef(false);
+
+  function resetSwipe() {
+    startX.current = null;
+    setRevealTime(false);
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLAnchorElement>) {
+    startX.current = event.clientX;
+    suppressNavigation.current = false;
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLAnchorElement>) {
+    if (startX.current === null) return;
+    if (event.clientX - startX.current > 18) {
+      suppressNavigation.current = true;
+      setRevealTime(true);
+    }
+  }
+
+  function handleClick(event: ReactMouseEvent<HTMLAnchorElement>) {
+    if (suppressNavigation.current) {
+      event.preventDefault();
+      suppressNavigation.current = false;
+      return;
+    }
+    onNavigate();
+  }
+
+  return (
+    <Link
+      href={`/?conversation=${encodeURIComponent(conversation.id)}`}
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={resetSwipe}
+      onPointerCancel={resetSwipe}
+      aria-label={`${conversation.title} · ${historyTimestamp(conversation.updatedAt)}`}
+      className={cn(
+        "group relative flex min-h-10 items-center overflow-hidden rounded-lg px-2.5 pr-13 text-left text-xs text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-sidebar-ring/25 touch-pan-y",
+        revealTime && "bg-sidebar-accent/60",
+      )}
+      title={conversation.title}
+    >
+      <span className={cn("block min-w-0 flex-1 truncate transition-transform duration-150", revealTime && "translate-x-2")}>{conversation.title}</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 translate-x-2 font-mono text-[10px] tabular-nums text-muted-foreground opacity-0 transition-all duration-150 group-focus-visible:translate-x-0 group-focus-visible:opacity-100",
+          revealTime && "translate-x-0 opacity-100",
+        )}
+      >
+        {historyTimestamp(conversation.updatedAt)}
+      </span>
+    </Link>
+  );
 }
 
 function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
@@ -119,21 +186,7 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
           <p className="px-2.5 py-2 text-xs text-muted-foreground">กำลังโหลด...</p>
         ) : conversations.length === 0 ? (
           <p className="px-2.5 py-2 text-xs leading-5 text-muted-foreground">เริ่มถามเพื่อเก็บบทสนทนาไว้ที่นี่</p>
-        ) : conversations.map((conversation) => (
-          <Link
-            key={conversation.id}
-            href={`/?conversation=${encodeURIComponent(conversation.id)}`}
-            onClick={onNavigate}
-            className="group flex min-h-10 items-center gap-2 rounded-lg px-2.5 text-left text-xs text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-sidebar-ring/25"
-            title={conversation.title}
-          >
-            <MessageSquareText className="size-3.5 shrink-0 text-muted-foreground group-hover:text-primary" aria-hidden="true" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate">{conversation.title}</span>
-              <span className="mt-0.5 block text-[10px] text-muted-foreground">{historyTimestamp(conversation.updatedAt)}</span>
-            </span>
-          </Link>
-        ))}
+        ) : conversations.map((conversation) => <ConversationHistoryItem key={conversation.id} conversation={conversation} onNavigate={onNavigate} />)}
       </div>
     </section>
   );
