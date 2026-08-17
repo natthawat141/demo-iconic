@@ -9,6 +9,7 @@ import {
 } from "ai";
 
 import { recordKnowledgeGap, retrieveKnowledge } from "@/lib/knowledge";
+import { conversationalReply } from "@/lib/chat-intent";
 
 function latestQuestion(messages: UIMessage[]) {
   const latest = [...messages].reverse().find((message) => message.role === "user");
@@ -40,6 +41,17 @@ export async function POST(request: Request) {
     return Response.json({ error: "กรุณาระบุคำถาม" }, { status: 400 });
   }
 
+  const directReply = conversationalReply(question);
+  if (directReply) {
+    const stream = createUIMessageStream({
+      originalMessages: messages,
+      execute: async ({ writer }) => {
+        writeText(writer, directReply);
+      },
+    });
+    return createUIMessageStreamResponse({ stream });
+  }
+
   const sources = await retrieveKnowledge(question);
   const stream = createUIMessageStream({
     originalMessages: messages,
@@ -61,9 +73,9 @@ export async function POST(request: Request) {
         return;
       }
 
-      const hasLiveModel = Boolean(
-        process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_CHAT_MODEL,
-      );
+      const chatModel =
+        process.env.OPENROUTER_CHAT_MODEL?.trim() || "openai/gpt-4.1-mini";
+      const hasLiveModel = Boolean(process.env.OPENROUTER_API_KEY);
       const safeMode =
         process.env.DEMO_SAFE_MODE === "true" || !hasLiveModel;
 
@@ -98,7 +110,7 @@ export async function POST(request: Request) {
           )
           .join("\n\n");
         const result = streamText({
-          model: openrouter(process.env.OPENROUTER_CHAT_MODEL!),
+          model: openrouter(chatModel),
           system: `${body.system ?? ""}\nคุณคือน้องฟ้า ผู้ช่วยความรู้ภายในของทีม ICONIC\nตอบภาษาไทยอย่างกระชับและเป็นธรรมชาติ ใช้เฉพาะ CONTEXT ที่ให้มาเป็นข้อเท็จจริงของ ICONIC ห้ามสร้างขั้นตอน นโยบาย หรือคำแนะนำเฉพาะบุคคลเพิ่มเอง หากบริบทขัดแย้งให้แจ้งว่าต้องส่งต่อหัวหน้าทีม ไม่ต้องสร้างรายการแหล่งอ้างอิงในข้อความ เพราะระบบจะแสดง Source Cards ให้เอง\n\nCONTEXT\n${context}`,
           messages: await convertToModelMessages(messages),
           temperature: 0.2,
@@ -129,4 +141,3 @@ export async function POST(request: Request) {
 
   return createUIMessageStreamResponse({ stream });
 }
-

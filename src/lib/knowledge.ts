@@ -65,6 +65,56 @@ export function cosineSimilarity(left: number[], right: number[]) {
   return score;
 }
 
+function characterNgrams(value: string, size: number) {
+  const compact = normalizeText(value).replace(/\s/g, "");
+  if (!compact) return new Set<string>();
+  if (compact.length <= size) return new Set([compact]);
+  const grams = new Set<string>();
+  for (let index = 0; index <= compact.length - size; index += 1) {
+    grams.add(compact.slice(index, index + size));
+  }
+  return grams;
+}
+
+function diceSimilarity(left: Set<string>, right: Set<string>) {
+  if (left.size === 0 || right.size === 0) return 0;
+  let intersection = 0;
+  for (const value of left) {
+    if (right.has(value)) intersection += 1;
+  }
+  return (2 * intersection) / (left.size + right.size);
+}
+
+export function lexicalSimilarity(
+  question: string,
+  item: KnowledgeItem,
+  excerpt: string,
+) {
+  const query = normalizeText(question);
+  const fields = [
+    item.title,
+    item.summary,
+    item.category,
+    item.tags.join(" "),
+    excerpt,
+  ];
+  const queryBigrams = characterNgrams(query, 2);
+  const queryTrigrams = characterNgrams(query, 3);
+  const ngramScore = Math.max(
+    ...fields.map((field) =>
+      0.4 * diceSimilarity(queryBigrams, characterNgrams(field, 2)) +
+      0.6 * diceSimilarity(queryTrigrams, characterNgrams(field, 3)),
+    ),
+  );
+  const terms = query.split(" ").filter((term) => term.length > 1);
+  const searchable = normalizeText(fields.join(" "));
+  const coverage = terms.length === 0
+    ? 0
+    : terms.filter((term) => searchable.includes(term)).length / terms.length;
+
+  return Math.min(ngramScore * 0.75 + coverage * 0.25, 1);
+}
+
 export function chunkKnowledge(item: KnowledgeItem) {
   const header = `${item.title}\n${item.summary}\nหมวดหมู่: ${item.category}\nแท็ก: ${item.tags.join(", ")}`;
   const paragraphs = item.content
@@ -215,8 +265,11 @@ export async function retrieveKnowledge(question: string) {
   for (const chunk of chunks) {
     const item = itemMap.get(chunk.knowledgeItemId);
     if (!item) continue;
-    const score =
-      cosineSimilarity(queryVector, chunk.embedding) + keywordBonus(question, item);
+    const vectorScore = cosineSimilarity(queryVector, chunk.embedding);
+    const lexicalScore = lexicalSimilarity(question, item, chunk.content);
+    const score = modelKey === LOCAL_MODEL
+      ? vectorScore * 0.72 + lexicalScore * 0.5 + keywordBonus(question, item)
+      : vectorScore + lexicalScore * 0.22 + keywordBonus(question, item);
     const existing = bestByItem.get(item.id);
     if (!existing || score > existing.score) {
       bestByItem.set(item.id, { item, excerpt: chunk.content, score });
@@ -225,7 +278,7 @@ export async function retrieveKnowledge(question: string) {
 
   // The local hash model is deliberately conservative: a false answer is
   // worse than creating a gap in this governance demo.
-  const threshold = modelKey === LOCAL_MODEL ? 0.46 : 0.34;
+  const threshold = modelKey === LOCAL_MODEL ? 0.36 : 0.46;
   return [...bestByItem.values()]
     .filter((entry) => entry.score >= threshold)
     .sort((left, right) => right.score - left.score)

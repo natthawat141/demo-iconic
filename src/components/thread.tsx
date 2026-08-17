@@ -51,7 +51,6 @@ import {
   MoreHorizontalIcon,
   PencilIcon,
   RefreshCwIcon,
-  SparklesIcon,
   SquareIcon,
 } from "lucide-react";
 import {
@@ -96,9 +95,9 @@ const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
     <ThreadPrimitive.Root
       className="aui-root aui-thread-root bg-background @container flex h-full flex-col"
       style={{
-        ["--thread-max-width" as string]: "48rem",
-        ["--composer-bg" as string]: "color-mix(in oklab, var(--color-muted) 30%, var(--color-background))",
-        ["--composer-radius" as string]: "0.875rem",
+        ["--thread-max-width" as string]: "50rem",
+        ["--composer-bg" as string]: "var(--color-background)",
+        ["--composer-radius" as string]: "0.75rem",
         ["--composer-padding" as string]: "8px",
       }}
     >
@@ -114,7 +113,7 @@ const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
           </div>
           <ThreadPrimitive.ViewportFooter
             className={cn(
-              "aui-thread-viewport-footer bg-background flex flex-col gap-4 overflow-visible pb-4 md:pb-6",
+              "aui-thread-viewport-footer flex flex-col gap-4 overflow-visible bg-transparent pb-4 md:pb-6",
               !isEmpty && "sticky bottom-0 mt-auto rounded-t-(--composer-radius)",
             )}
           >
@@ -147,31 +146,28 @@ const ThreadScrollToBottom: FC = () => (
 );
 
 const ThreadWelcome: FC = () => (
-  <div className="aui-thread-welcome-root mb-8 flex flex-col items-center px-4 text-center">
-    <span className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-secondary text-primary">
-      <SparklesIcon className="size-6" aria-hidden="true" />
-    </span>
-    <p className="mb-2 text-sm font-semibold text-primary">ICONIC Knowledge Assistant</p>
+  <div className="aui-thread-welcome-root mb-8 flex flex-col items-start px-1 text-left">
+    <p className="mb-2 text-sm font-medium text-muted-foreground">Nong Fah</p>
     <h1 className="aui-thread-welcome-message-inner text-balance text-2xl font-bold tracking-[-0.02em] sm:text-[1.75rem]">
-      วันนี้อยากให้น้องฟ้าช่วยเรื่องอะไร?
+      วันนี้ให้ช่วยอะไร?
     </h1>
     <p className="mt-2 max-w-[60ch] text-pretty text-sm leading-6 text-muted-foreground">
-      ถามจากความรู้ที่ทีมอนุมัติแล้ว น้องฟ้าจะแสดงแหล่งข้อมูลให้ทุกครั้ง และจะไม่เดาเมื่อข้อมูลไม่พอ
+      ถามจากความรู้ที่ทีมอนุมัติแล้ว พร้อมแหล่งข้อมูลที่ตรวจสอบย้อนกลับได้
     </p>
   </div>
 );
 
 const ThreadSuggestions: FC = () => (
-  <div className="aui-thread-welcome-suggestions grid w-full gap-2 px-1 sm:grid-cols-3">
+  <div className="aui-thread-welcome-suggestions grid w-full overflow-hidden rounded-xl border bg-background sm:grid-cols-3 sm:divide-x">
     <ThreadPrimitive.Suggestions>{() => <ThreadSuggestionItem />}</ThreadPrimitive.Suggestions>
   </div>
 );
 
 const ThreadSuggestionItem: FC = () => (
-  <div className="aui-thread-welcome-suggestion-display fade-in slide-in-from-bottom-2 animate-in fill-mode-both duration-200">
+  <div className="aui-thread-welcome-suggestion-display border-t first:border-t-0 sm:border-t-0">
     <SuggestionPrimitive.Trigger
       send
-      render={<Button variant="ghost" className="aui-thread-welcome-suggestion h-full min-h-20 w-full flex-col items-start justify-center gap-1 rounded-xl bg-muted px-4 py-3 text-left font-normal whitespace-normal transition-colors hover:bg-secondary" />}
+      render={<Button variant="ghost" className="aui-thread-welcome-suggestion h-full min-h-20 w-full flex-col items-start justify-center gap-1 rounded-none px-4 py-3 text-left font-normal whitespace-normal transition-colors hover:bg-muted" />}
     >
       <SuggestionPrimitive.Title className="aui-thread-welcome-suggestion-text-1 text-sm font-semibold" />
       <SuggestionPrimitive.Description className="aui-thread-welcome-suggestion-text-2 text-xs leading-5 text-muted-foreground empty:hidden" />
@@ -181,7 +177,7 @@ const ThreadSuggestionItem: FC = () => (
 
 const Composer: FC = () => (
   <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
-    <div data-slot="aui_composer-shell" className="border-border/60 focus-within:border-border flex w-full flex-col gap-2 rounded-(--composer-radius) border bg-(--composer-bg) p-(--composer-padding) shadow-[0_4px_16px_-8px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] focus-within:shadow-[0_6px_24px_-8px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.05)]">
+    <div data-slot="aui_composer-shell" className="flex w-full flex-col gap-2 rounded-(--composer-radius) border border-input bg-(--composer-bg) p-(--composer-padding) transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/20">
       <ComposerPrimitive.Input
         placeholder="ถามน้องฟ้าจาก Knowledge ของทีม..."
         className="aui-composer-input caret-primary placeholder:text-muted-foreground/80 max-h-32 min-h-10 w-full resize-none bg-transparent px-2.5 py-1 text-base outline-none"
@@ -204,7 +200,7 @@ const ComposerAction: FC = () => (
         </AuiIf>
       </AuiIf>
       <AuiIf condition={(state) => !state.thread.isRunning}>
-        <ComposerPrimitive.Send render={<TooltipIconButton tooltip="ส่งคำถาม" side="bottom" type="button" variant="default" size="icon" className="aui-composer-send size-8 rounded-lg" aria-label="ส่งคำถาม" />}><ArrowUpIcon className="size-4.5" /></ComposerPrimitive.Send>
+        <ComposerPrimitive.Send render={<TooltipIconButton tooltip="ส่งคำถาม" side="bottom" type="button" variant="default" size="icon" className="aui-composer-send size-10 rounded-lg" aria-label="ส่งคำถาม" />}><ArrowUpIcon className="size-4.5" /></ComposerPrimitive.Send>
       </AuiIf>
       <AuiIf condition={(state) => state.thread.isRunning}>
         <ComposerPrimitive.Cancel render={<Button type="button" variant="default" size="icon" className="aui-composer-cancel size-7 rounded-full" aria-label="Stop generating" />}><SquareIcon className="size-3.5 fill-current" /></ComposerPrimitive.Cancel>

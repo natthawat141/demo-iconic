@@ -16,6 +16,7 @@ import { CheckCircle2, Send, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
 import { Thread } from "@/components/thread";
+import { Button } from "@/components/ui/button";
 import type { KnowledgeStateData } from "@/lib/demo-types";
 
 function KnowledgeState({ data }: DataMessagePartProps<KnowledgeStateData>) {
@@ -52,11 +53,12 @@ function KnowledgeState({ data }: DataMessagePartProps<KnowledgeStateData>) {
         {data.label}
       </span>
       {insufficient ? (
-        <button
+        <Button
           type="button"
           onClick={escalate}
           disabled={sending || sent}
-          className="flex min-h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-xs font-semibold text-background transition-colors hover:bg-foreground/85 disabled:opacity-70"
+          size="sm"
+          className="h-9 px-3"
         >
           {sent ? (
             <CheckCircle2 className="size-3.5" />
@@ -68,7 +70,7 @@ function KnowledgeState({ data }: DataMessagePartProps<KnowledgeStateData>) {
             : sending
               ? "กำลังส่ง..."
               : "ส่งให้หัวหน้าทีม"}
-        </button>
+        </Button>
       ) : null}
     </div>
   );
@@ -112,7 +114,7 @@ export const Assistant = () => {
   return (
     <AssistantRuntimeProvider runtime={runtime} config={config}>
       <KnowledgeDataRenderer />
-      <div className="h-[calc(100dvh-4rem)] lg:h-dvh">
+      <div className="h-[calc(100dvh-3.5rem)]">
         <Thread />
       </div>
     </AssistantRuntimeProvider>

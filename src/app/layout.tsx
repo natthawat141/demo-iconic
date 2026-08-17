@@ -15,15 +15,20 @@ const notoSansThai = Noto_Sans_Thai({
 
 export const metadata: Metadata = {
   title: "น้องฟ้า · ICONIC Knowledge Assistant",
-  description: "Prototype ผู้ช่วยความรู้ภายในสำหรับทีม ICONIC",
+  description: "ผู้ช่วยความรู้ภายในสำหรับทีม ICONIC",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const modelId =
+    process.env.OPENROUTER_CHAT_MODEL?.trim() || "openai/gpt-4.1-mini";
+  const liveModel = Boolean(process.env.OPENROUTER_API_KEY) &&
+    process.env.DEMO_SAFE_MODE !== "true";
+
   return (
     <html lang="th" className={`${notoSansThai.variable} h-full antialiased`}>
       <body className="min-h-full">
         <TooltipProvider>
-          <AppShell>{children}</AppShell>
+          <AppShell modelId={modelId} liveModel={liveModel}>{children}</AppShell>
         </TooltipProvider>
       </body>
     </html>

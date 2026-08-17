@@ -7,7 +7,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 
 import * as schema from "./schema";
-import { seedKnowledge } from "./seed-data";
+import { seedKnowledge, seedKnowledgeGaps } from "./seed-data";
 
 const dataDirectory = path.join(process.cwd(), "data");
 mkdirSync(dataDirectory, { recursive: true });
@@ -68,6 +68,7 @@ export function ensureSeeded() {
     .all();
   if (value === 0) {
     db.insert(schema.knowledgeItems).values(seedKnowledge).run();
+    db.insert(schema.knowledgeGaps).values(seedKnowledgeGaps).run();
   }
 }
 
@@ -76,6 +77,7 @@ export function resetDemoData() {
   db.delete(schema.knowledgeGaps).run();
   db.delete(schema.knowledgeItems).run();
   db.insert(schema.knowledgeItems).values(seedKnowledge).run();
+  db.insert(schema.knowledgeGaps).values(seedKnowledgeGaps).run();
 }
 
 ensureSeeded();

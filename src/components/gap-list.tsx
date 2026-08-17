@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { BookPlus, CircleHelp, EyeOff, MessageCircleQuestion } from "lucide-react";
 import { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { KnowledgeGapDto } from "@/lib/demo-types";
 import { GapStatusBadge } from "./status-badge";
 
@@ -73,9 +75,9 @@ export function GapList({ initialGaps }: { initialGaps: KnowledgeGapDto[] }) {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <GapStatusBadge status={gap.status} />
-                        <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
+                        <Badge variant="secondary">
                           ถูกถาม {gap.count} ครั้ง
-                        </span>
+                        </Badge>
                       </div>
                       <h2 className="mt-3 text-pretty font-semibold leading-7">{gap.question}</h2>
                       <p className="mt-1 text-xs text-muted-foreground">ล่าสุด {formatDate(gap.lastAskedAt)}</p>
@@ -83,32 +85,37 @@ export function GapList({ initialGaps }: { initialGaps: KnowledgeGapDto[] }) {
                   </div>
                   {!closed ? (
                     <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-                      <button
+                      <Button
                         type="button"
                         onClick={() => convert(gap.id)}
                         disabled={workingId === gap.id}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground hover:bg-[oklch(0.49_0.17_24)] disabled:opacity-60"
+                        size="lg"
+                        className="h-11 px-3.5"
                       >
                         <BookPlus className="size-4" />
                         {workingId === gap.id ? "กำลังเปิด..." : "เพิ่มเป็น Knowledge"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={() => dismiss(gap.id)}
                         disabled={workingId === gap.id}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold text-muted-foreground hover:bg-muted disabled:opacity-60"
+                        variant="outline"
+                        size="lg"
+                        className="h-11 px-3.5 text-muted-foreground"
                       >
                         <EyeOff className="size-4" /> ปิดรายการ
-                      </button>
+                      </Button>
                     </div>
                   ) : gap.resolvedKnowledgeItemId ? (
-                    <button
+                    <Button
                       type="button"
                       onClick={() => router.push(`/knowledge/${gap.resolvedKnowledgeItemId}`)}
-                      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold hover:bg-muted"
+                      variant="outline"
+                      size="lg"
+                      className="h-11 shrink-0 px-3.5"
                     >
                       เปิด Knowledge
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </article>
@@ -119,4 +126,3 @@ export function GapList({ initialGaps }: { initialGaps: KnowledgeGapDto[] }) {
     </section>
   );
 }
-

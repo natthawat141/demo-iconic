@@ -4,6 +4,9 @@ import Link from "next/link";
 import { ArrowUpRight, BookOpenText, Search } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { KnowledgeItemDto, KnowledgeStatus } from "@/lib/demo-types";
 import { KnowledgeStatusBadge } from "./status-badge";
 
@@ -46,36 +49,36 @@ export function KnowledgeList({ items }: { items: KnowledgeItemDto[] }) {
         <label className="relative flex-1">
           <span className="sr-only">ค้นหา Knowledge</span>
           <Search className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" />
-          <input
+          <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="ค้นหาชื่อ เนื้อหา หมวดหมู่ หรือแท็ก"
-            className="h-11 w-full rounded-lg border bg-background pl-10 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-11 pl-10"
           />
         </label>
-        <select
+        <NativeSelect
           value={status}
           onChange={(event) => setStatus(event.target.value as typeof status)}
           aria-label="กรองตามสถานะ"
-          className="h-11 rounded-lg border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-11"
         >
           {statusOptions.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
-        </select>
-        <select
+        </NativeSelect>
+        <NativeSelect
           value={category}
           onChange={(event) => setCategory(event.target.value)}
           aria-label="กรองตามหมวดหมู่"
-          className="h-11 rounded-lg border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-11"
         >
           <option value="all">ทุกหมวดหมู่</option>
           {categories.map((value) => <option key={value} value={value}>{value}</option>)}
-        </select>
+        </NativeSelect>
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border">
-        <div className="hidden grid-cols-[minmax(280px,1.6fr)_minmax(150px,.7fr)_130px_110px] gap-4 bg-muted px-4 py-3 text-xs font-semibold text-muted-foreground md:grid">
+        <div className="hidden grid-cols-[minmax(280px,1.6fr)_minmax(150px,.7fr)_130px_110px] gap-4 bg-muted/70 px-4 py-3 text-xs font-semibold text-muted-foreground md:grid">
           <span>Knowledge</span><span>เจ้าของ</span><span>สถานะ</span><span>อัปเดต</span>
         </div>
         {visibleItems.length === 0 ? (
@@ -89,7 +92,7 @@ export function KnowledgeList({ items }: { items: KnowledgeItemDto[] }) {
             <Link
               key={item.id}
               href={`/knowledge/${item.id}`}
-              className="grid gap-3 border-t px-4 py-4 first:border-t-0 transition-colors hover:bg-muted/70 md:grid-cols-[minmax(280px,1.6fr)_minmax(150px,.7fr)_130px_110px] md:items-center md:gap-4"
+              className="grid gap-3 border-t px-4 py-4 first:border-t-0 transition-colors hover:bg-accent/45 md:grid-cols-[minmax(280px,1.6fr)_minmax(150px,.7fr)_130px_110px] md:items-center md:gap-4"
             >
               <span className="min-w-0">
                 <span className="flex items-center gap-2 font-semibold">
@@ -97,7 +100,7 @@ export function KnowledgeList({ items }: { items: KnowledgeItemDto[] }) {
                   <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground" />
                 </span>
                 <span className="mt-1 block truncate text-sm text-muted-foreground">{item.summary}</span>
-                <span className="mt-2 inline-flex rounded-full bg-accent px-2 py-0.5 text-xs text-accent-foreground md:hidden">{item.category}</span>
+                <Badge variant="secondary" className="mt-2 md:hidden">{item.category}</Badge>
               </span>
               <span className="text-sm text-muted-foreground">{item.ownerName}</span>
               <KnowledgeStatusBadge status={item.status} />
@@ -110,4 +113,3 @@ export function KnowledgeList({ items }: { items: KnowledgeItemDto[] }) {
     </section>
   );
 }
-

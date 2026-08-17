@@ -1,9 +1,9 @@
-import type { NewKnowledgeItem } from "./schema";
+import type { NewKnowledgeGap, NewKnowledgeItem } from "./schema";
 
 const now = new Date("2026-08-12T09:00:00+07:00");
 const reviewDate = new Date("2026-11-12T09:00:00+07:00");
 
-export const seedKnowledge: NewKnowledgeItem[] = [
+const baseSeedKnowledge: NewKnowledgeItem[] = [
   {
     id: "km-objection-partner",
     title: "เมื่อลูกค้าขอปรึกษาคู่สมรสก่อน",
@@ -142,3 +142,369 @@ export const seedKnowledge: NewKnowledgeItem[] = [
   },
 ];
 
+type DemoKnowledgeInput = {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  sourceLabel: string;
+  ownerName: string;
+  status?: "draft" | "approved" | "archived";
+};
+
+const extraKnowledge: DemoKnowledgeInput[] = [
+  {
+    id: "km-first-discovery-call",
+    title: "โครงสร้างการสนทนาครั้งแรกกับลูกค้า",
+    summary: "เริ่มจากเป้าหมาย บริบท และสิ่งที่ลูกค้าต้องการให้ช่วย",
+    content: "เปิดการสนทนาด้วยการยืนยันเวลาที่มีและวัตถุประสงค์ของการพบกัน ถามเป้าหมายหลัก สิ่งที่กังวล และวิธีตัดสินใจที่ลูกค้าสะดวก สรุปสิ่งที่ได้ยินก่อนนำเสนอขั้นตอนถัดไป และยังไม่ควรเสนอคำตอบเฉพาะทางหากข้อมูลสำคัญยังไม่ครบ",
+    category: "การเริ่มต้นความสัมพันธ์",
+    tags: ["discovery", "first meeting", "client goal"],
+    sourceLabel: "ICONIC Conversation Framework — ข้อมูลตัวอย่าง",
+    ownerName: "Sales Leadership",
+  },
+  {
+    id: "km-client-consent-contact",
+    title: "การขอความยินยอมก่อนติดต่อบุคคลที่ได้รับการแนะนำ",
+    summary: "ยืนยันความยินยอมและช่องทางติดต่อก่อนใช้ข้อมูล Referral",
+    content: "ก่อนติดต่อบุคคลที่ลูกค้าแนะนำ ต้องยืนยันว่าบุคคลนั้นรับทราบและยินยอมให้ติดต่อแล้ว บันทึกชื่อผู้แนะนำ วันที่ได้รับความยินยอม และช่องทางที่อนุญาต ห้ามนำข้อมูลไปใช้เพื่อวัตถุประสงค์อื่นหรือส่งต่อภายในทีมเกินความจำเป็น",
+    category: "ความเป็นส่วนตัว",
+    tags: ["consent", "referral", "privacy"],
+    sourceLabel: "Client Consent Checklist — ข้อมูลตัวอย่าง",
+    ownerName: "Compliance Team",
+  },
+  {
+    id: "km-meeting-summary",
+    title: "มาตรฐานสรุปการประชุมกับลูกค้า",
+    summary: "บันทึกข้อเท็จจริง การตัดสินใจ และ next action ให้อ่านต่อได้",
+    content: "สรุปการประชุมควรประกอบด้วยวันที่ ผู้เข้าร่วม เป้าหมายการสนทนา สิ่งที่ลูกค้าให้ความสำคัญ คำถามที่ยังเปิดอยู่ และ next action พร้อมผู้รับผิดชอบ หลีกเลี่ยงการบันทึกความเห็นส่วนตัวที่ไม่จำเป็นและไม่คัดลอกข้อมูลอ่อนไหวลงในช่องสรุปทั่วไป",
+    category: "การบันทึกงาน",
+    tags: ["meeting note", "next action", "handoff"],
+    sourceLabel: "ICONIC Meeting Note Standard — ข้อมูลตัวอย่าง",
+    ownerName: "Operations",
+  },
+  {
+    id: "km-no-response-follow-up",
+    title: "เมื่อลูกค้าไม่ตอบการติดตาม",
+    summary: "เว้นระยะอย่างเหมาะสมและเพิ่มคุณค่าในทุกการติดต่อ",
+    content: "หากลูกค้าไม่ตอบ ให้ตรวจว่าข้อความก่อนหน้ามีคำถามหรือ next action ที่ชัดหรือไม่ การติดตามครั้งถัดไปควรมีข้อมูลใหม่หรือทางเลือกเวลาที่ตอบง่าย หลีกเลี่ยงการส่งข้อความเดิมซ้ำหลายครั้ง และหยุดติดต่อตามความประสงค์ของลูกค้า",
+    category: "การติดตามลูกค้า",
+    tags: ["follow-up", "no response", "contact preference"],
+    sourceLabel: "ICONIC Follow-up Guide — ข้อมูลตัวอย่าง",
+    ownerName: "Client Care Team",
+  },
+  {
+    id: "km-handoff-advisor",
+    title: "การส่งต่องานระหว่างที่ปรึกษา",
+    summary: "ส่งต่อบริบทที่จำเป็นโดยไม่ให้ลูกค้าต้องเล่าใหม่ทั้งหมด",
+    content: "ก่อนส่งต่องาน ให้ยืนยันกับลูกค้าว่าใครจะเป็นผู้ดูแลต่อ สรุปเป้าหมาย ประเด็นค้าง และ next action ที่ตกลงแล้ว ผู้รับงานควรทบทวนบันทึกก่อนติดต่อและเริ่มด้วยการยืนยันความเข้าใจ ห้ามส่งต่อข้อมูลที่ไม่เกี่ยวข้องกับงาน",
+    category: "การทำงานเป็นทีม",
+    tags: ["handoff", "advisor", "continuity"],
+    sourceLabel: "Advisor Handoff Checklist — ข้อมูลตัวอย่าง",
+    ownerName: "Operations",
+  },
+  {
+    id: "km-sensitive-data",
+    title: "ข้อมูลลูกค้าที่ไม่ควรใส่ใน Knowledge",
+    summary: "แยกความรู้ของทีมออกจากข้อมูลส่วนบุคคลและเอกสารลูกค้า",
+    content: "Knowledge ต้องไม่บันทึกชื่อจริง เลขประจำตัว วันเกิด หมายเลขกรมธรรม์ ข้อมูลสุขภาพ รายละเอียดบัญชี หรือเอกสารที่ระบุตัวลูกค้าได้ หากต้องใช้กรณีศึกษาให้ลบข้อมูลระบุตัวตนและเปลี่ยนรายละเอียดที่ไม่กระทบบทเรียนก่อนส่งอนุมัติ",
+    category: "ความเป็นส่วนตัว",
+    tags: ["PII", "privacy", "knowledge governance"],
+    sourceLabel: "Data Handling Standard — ข้อมูลตัวอย่าง",
+    ownerName: "Compliance Team",
+  },
+  {
+    id: "km-source-citation",
+    title: "มาตรฐานแหล่งอ้างอิงของ Knowledge",
+    summary: "ทุกคำแนะนำต้องย้อนกลับไปยังแหล่งที่มาและเจ้าของได้",
+    content: "แหล่งอ้างอิงควรระบุชื่อเอกสาร เวอร์ชันหรือวันที่ และเจ้าของเนื้อหาอย่างชัดเจน หากเกิดจากการประชุม ให้ระบุผู้อนุมัติและวันที่สรุป ห้ามใช้ข้อความจากแชตที่ไม่ทราบผู้เขียนเป็นแหล่งเดียวของ Knowledge ที่ได้รับอนุมัติ",
+    category: "การจัดการความรู้",
+    tags: ["source", "citation", "traceability"],
+    sourceLabel: "Knowledge Governance Standard — ข้อมูลตัวอย่าง",
+    ownerName: "Knowledge Governance",
+  },
+  {
+    id: "km-knowledge-review",
+    title: "การทบทวน Knowledge ตามรอบ",
+    summary: "ตรวจเจ้าของ แหล่งที่มา และความถูกต้องก่อนครบกำหนด",
+    content: "เจ้าของ Knowledge ต้องทบทวนเนื้อหาก่อนวันครบกำหนด ตรวจว่าขั้นตอน แหล่งอ้างอิง และข้อจำกัดยังถูกต้อง หากยังยืนยันไม่ได้ให้เปลี่ยนเป็น Draft หรือ Archived ชั่วคราว ระบบไม่ควรนำรายการที่หมดอายุโดยไม่มีผู้รับผิดชอบไปตอบอัตโนมัติ",
+    category: "การจัดการความรู้",
+    tags: ["review", "expiry", "owner"],
+    sourceLabel: "Knowledge Review Policy — ข้อมูลตัวอย่าง",
+    ownerName: "Knowledge Governance",
+  },
+  {
+    id: "km-duplicate-knowledge",
+    title: "การรวม Knowledge ที่ซ้ำกัน",
+    summary: "เลือกแหล่งหลักหนึ่งรายการและเก็บประวัติการเปลี่ยนแปลง",
+    content: "เมื่อพบ Knowledge ซ้ำ ให้เปรียบเทียบเจ้าของ แหล่งที่มา วันที่อนุมัติ และขอบเขตการใช้งาน เลือกรายการหลักเพียงหนึ่งรายการ รวมเนื้อหาที่ไม่ขัดแย้ง และ Archive รายการเดิมพร้อมบันทึกว่าถูกรวมไปยังรายการใด",
+    category: "การจัดการความรู้",
+    tags: ["duplicate", "merge", "versioning"],
+    sourceLabel: "Knowledge Maintenance Guide — ข้อมูลตัวอย่าง",
+    ownerName: "Knowledge Governance",
+  },
+  {
+    id: "km-outdated-script",
+    title: "สคริปต์เปิดการสนทนาเวอร์ชันเดิม",
+    summary: "เก็บไว้เพื่อแสดงประวัติ แต่ไม่ควรนำไปใช้ตอบ",
+    content: "รายการนี้เป็นตัวอย่าง Knowledge ที่ถูกแทนที่ด้วย Conversation Framework เวอร์ชันปัจจุบันและไม่ควรนำไปใช้งาน",
+    category: "การเริ่มต้นความสัมพันธ์",
+    tags: ["archived", "script", "history"],
+    sourceLabel: "Legacy Sales Script — ข้อมูลตัวอย่าง",
+    ownerName: "Sales Leadership",
+    status: "archived",
+  },
+  {
+    id: "km-complaint-first-response",
+    title: "การตอบรับเมื่อลูกค้าแจ้งข้อร้องเรียน",
+    summary: "รับฟัง บันทึกข้อเท็จจริง และแจ้งขั้นตอนโดยไม่รีบสรุปผล",
+    content: "เริ่มจากขอบคุณที่ลูกค้าแจ้งเรื่องและยืนยันประเด็นที่ได้รับฟัง บันทึกวันเวลา ช่องทาง และผลกระทบที่ลูกค้าอธิบาย แจ้งผู้รับผิดชอบและกรอบเวลาติดต่อกลับตามกระบวนการของทีม ห้ามรับปากผลลัพธ์หรือกล่าวโทษบุคคลใดก่อนตรวจสอบ",
+    category: "การดูแลลูกค้า",
+    tags: ["complaint", "escalation", "client care"],
+    sourceLabel: "Complaint Intake Guide — ข้อมูลตัวอย่าง",
+    ownerName: "Client Care Team",
+  },
+  {
+    id: "km-urgent-escalation",
+    title: "เกณฑ์ส่งต่อเรื่องเร่งด่วน",
+    summary: "แยกเรื่องที่ต้องให้หัวหน้าทีมหรือ Compliance รับช่วงทันที",
+    content: "ส่งต่อทันทีเมื่อมีความเสี่ยงต่อข้อมูลส่วนบุคคล ลูกค้าระบุว่าจะดำเนินการทางกฎหมาย พบข้อมูลหรือเอกสารขัดแย้งกัน หรือมีคำขอให้ข้ามขั้นตอนควบคุม ระบุข้อเท็จจริงที่ทราบ ผลกระทบ และช่องทางติดต่อกลับโดยไม่ตีความเกินข้อมูล",
+    category: "การกำกับงาน",
+    tags: ["urgent", "escalation", "compliance"],
+    sourceLabel: "Urgent Escalation Matrix — ข้อมูลตัวอย่าง",
+    ownerName: "Compliance Team",
+  },
+  {
+    id: "km-change-in-life",
+    title: "การเช็กอินเมื่อลูกค้ามีการเปลี่ยนแปลงชีวิต",
+    summary: "เริ่มจากทำความเข้าใจสถานการณ์ใหม่ก่อนทบทวนแผนเดิม",
+    content: "เมื่อลูกค้าแจ้งการเปลี่ยนงาน แต่งงาน มีบุตร หรือย้ายที่อยู่ ให้ยืนยันสิ่งที่เปลี่ยนและผลกระทบที่ลูกค้ากังวล นัดหมายเพื่อทบทวนข้อมูลที่เกี่ยวข้อง และส่งต่อผู้มีอำนาจให้คำแนะนำเมื่อคำถามมีผลต่อการตัดสินใจเฉพาะบุคคล",
+    category: "รอบการดูแล",
+    tags: ["life event", "review", "client context"],
+    sourceLabel: "Client Review Cycle — ข้อมูลตัวอย่าง",
+    ownerName: "Client Care Team",
+  },
+  {
+    id: "km-annual-review",
+    title: "เช็กลิสต์การทบทวนประจำปี",
+    summary: "เตรียมบริบท ประเด็นเปลี่ยนแปลง และคำถามเปิดก่อนการประชุม",
+    content: "ก่อนประชุมทบทวนประจำปี ให้ตรวจข้อมูลติดต่อ ผู้มีส่วนร่วมในการตัดสินใจ การเปลี่ยนแปลงที่ลูกค้าเคยแจ้ง และประเด็นค้างจากครั้งก่อน เตรียมคำถามเพื่อให้ลูกค้าอธิบายเป้าหมายปัจจุบัน และหลีกเลี่ยงการสรุปว่าความต้องการยังเหมือนเดิม",
+    category: "รอบการดูแล",
+    tags: ["annual review", "checklist", "preparation"],
+    sourceLabel: "Annual Review Checklist — ข้อมูลตัวอย่าง",
+    ownerName: "Operations",
+  },
+  {
+    id: "km-remote-meeting",
+    title: "การเตรียมประชุมออนไลน์กับลูกค้า",
+    summary: "ตรวจช่องทาง เอกสาร และความเป็นส่วนตัวก่อนเริ่มประชุม",
+    content: "ส่งลิงก์และวาระล่วงหน้า ตรวจว่าเอกสารที่จะแชร์ไม่มีข้อมูลของลูกค้ารายอื่น และใช้พื้นที่ที่บุคคลภายนอกไม่ได้ยินข้อมูลส่วนตัว หากต้องบันทึกการประชุมต้องขอความยินยอมก่อนทุกครั้ง",
+    category: "การเตรียมงาน",
+    tags: ["remote meeting", "privacy", "checklist"],
+    sourceLabel: "Remote Meeting Standard — ข้อมูลตัวอย่าง",
+    ownerName: "Operations",
+  },
+  {
+    id: "km-ai-feedback",
+    title: "วิธีรายงานคำตอบ AI ที่ไม่ถูกต้อง",
+    summary: "เก็บคำถาม คำตอบ และแหล่งอ้างอิงเพื่อให้ทีมแก้ที่ต้นเหตุ",
+    content: "เมื่อพบคำตอบที่ไม่ถูกต้อง ให้บันทึกคำถามเดิม ข้อความคำตอบ แหล่งข้อมูลที่ระบบแสดง และคำอธิบายว่าจุดใดผิด ห้ามแก้ด้วยการเพิ่มข้อความกว้าง ๆ โดยไม่ระบุเจ้าของ ทีม Knowledge ต้องตรวจว่าเกิดจากเนื้อหา การค้นคืน หรือคำสั่งของโมเดลก่อนแก้ไข",
+    category: "การกำกับ AI",
+    tags: ["AI feedback", "quality", "incident"],
+    sourceLabel: "AI Quality Playbook — ข้อมูลตัวอย่าง",
+    ownerName: "Knowledge Governance",
+  },
+  {
+    id: "km-gap-triage",
+    title: "การจัดลำดับ Knowledge Gap",
+    summary: "ดูความถี่ ผลกระทบ และเจ้าของก่อนเริ่มเขียนคำตอบ",
+    content: "จัดลำดับ Gap จากจำนวนครั้งที่ถูกถาม ผลกระทบต่อการทำงาน ความเร่งด่วน และความพร้อมของแหล่งข้อมูล คำถามที่พบบ่อยแต่ไม่มีเจ้าของควรถูกส่งต่อก่อน ไม่ควรอนุมัติคำตอบเพียงเพื่อปิดจำนวน Gap หากยังไม่มีแหล่งที่เชื่อถือได้",
+    category: "การจัดการความรู้",
+    tags: ["knowledge gap", "triage", "priority"],
+    sourceLabel: "Knowledge Gap Workflow — ข้อมูลตัวอย่าง",
+    ownerName: "Knowledge Governance",
+  },
+  {
+    id: "km-document-naming",
+    title: "มาตรฐานตั้งชื่อเอกสารความรู้",
+    summary: "ตั้งชื่อให้ค้นหาได้และแยกเวอร์ชันได้โดยไม่ใช้ชื่อบุคคล",
+    content: "ชื่อเอกสารควรสื่อหัวข้อ กระบวนการ และเวอร์ชันหรือวันที่เมื่อจำเป็น หลีกเลี่ยงชื่อทั่วไป เช่น final หรือ new และห้ามใส่ชื่อลูกค้าในชื่อเอกสารที่ใช้เป็น Knowledge ส่วนกลาง",
+    category: "การจัดการความรู้",
+    tags: ["document", "naming", "version"],
+    sourceLabel: "Document Naming Guide — ข้อมูลตัวอย่าง",
+    ownerName: "Operations",
+  },
+  {
+    id: "km-claim-first-contact",
+    title: "การติดต่อครั้งแรกหลังรับแจ้งเคลม",
+    summary: "เนื้อหารอการตรวจสอบจากผู้รับผิดชอบก่อนนำไปใช้",
+    content: "Draft สำหรับทดสอบ workflow การตรวจสอบข้อมูล ขั้นตอน และเจ้าของก่อนอนุมัติให้ผู้ช่วยนำไปตอบ",
+    category: "การดูแลลูกค้า",
+    tags: ["claim", "first contact", "draft"],
+    sourceLabel: "Claim Care Workshop — ข้อมูลตัวอย่าง",
+    ownerName: "Client Care Team",
+    status: "draft",
+  },
+  {
+    id: "km-policy-comparison-boundary",
+    title: "ขอบเขตการตอบคำถามเปรียบเทียบผลิตภัณฑ์",
+    summary: "อธิบายเกณฑ์ทั่วไปได้ แต่ไม่ตัดสินใจแทนลูกค้า",
+    content: "ผู้ช่วยอธิบายคำศัพท์ เกณฑ์ที่ควรตรวจ และคำถามที่ควรถามเพิ่มเติมได้จาก Knowledge ที่อนุมัติ แต่ต้องไม่เลือกผลิตภัณฑ์หรือสรุปความเหมาะสมเฉพาะบุคคลแทนลูกค้า คำถามดังกล่าวต้องส่งต่อผู้มีหน้าที่ให้คำแนะนำพร้อมบริบทที่จำเป็น",
+    category: "การกำกับ AI",
+    tags: ["comparison", "guardrail", "personal advice"],
+    sourceLabel: "AI Answer Boundary — ข้อมูลตัวอย่าง",
+    ownerName: "Compliance Team",
+  },
+  {
+    id: "km-customer-question-log",
+    title: "การบันทึกคำถามที่ลูกค้าถามบ่อย",
+    summary: "เก็บถ้อยคำจริงโดยไม่เก็บข้อมูลระบุตัวบุคคล",
+    content: "บันทึกใจความของคำถามด้วยภาษาที่ลูกค้าใช้จริง ตัดชื่อ หมายเลข และรายละเอียดที่ระบุตัวบุคคลได้ออก จัดหมวดหมู่และนับความถี่เพื่อใช้วางแผน Knowledge แต่ไม่ควรรวมหลายเจตนาไว้ในคำถามเดียว",
+    category: "การจัดการความรู้",
+    tags: ["FAQ", "question log", "privacy"],
+    sourceLabel: "Question Capture Standard — ข้อมูลตัวอย่าง",
+    ownerName: "Knowledge Governance",
+  },
+  {
+    id: "km-team-coaching-notes",
+    title: "การเปลี่ยน Coaching Note เป็น Knowledge",
+    summary: "รอแยกข้อสังเกตส่วนบุคคลออกก่อนเสนออนุมัติ",
+    content: "Draft สำหรับแสดงขั้นตอนคัดเลือกบทเรียนจาก Coaching Note โดยต้องตัดข้อมูลรายบุคคล ระบุแหล่งที่มา และให้เจ้าของกระบวนการตรวจสอบก่อน",
+    category: "การพัฒนาทีม",
+    tags: ["coaching", "draft", "knowledge capture"],
+    sourceLabel: "Team Coaching Workshop — ข้อมูลตัวอย่าง",
+    ownerName: "Sales Leadership",
+    status: "draft",
+  },
+];
+
+function createDemoKnowledge(
+  item: DemoKnowledgeInput,
+  index: number,
+): NewKnowledgeItem {
+  const status = item.status ?? "approved";
+  const updatedAt = new Date(now.getTime() - (index + 1) * 86_400_000);
+  return {
+    ...item,
+    status,
+    reviewDate,
+    approvedBy: status === "approved" ? "Demo Knowledge Manager" : null,
+    approvedAt: status === "approved" ? updatedAt : null,
+    createdAt: new Date(updatedAt.getTime() - 7 * 86_400_000),
+    updatedAt,
+  };
+}
+
+export const seedKnowledge: NewKnowledgeItem[] = [
+  ...baseSeedKnowledge,
+  ...extraKnowledge.map(createDemoKnowledge),
+];
+
+function hoursAgo(hours: number) {
+  return new Date(now.getTime() - hours * 3_600_000);
+}
+
+export const seedKnowledgeGaps: NewKnowledgeGap[] = [
+  {
+    id: "gap-product-comparison",
+    question: "ลูกค้ารายนี้ควรเลือกแผนของบริษัท A หรือบริษัท B?",
+    normalizedQuestion: "ลูกค้ารายนี้ควรเลือกแผนของบริษัท a หรือบริษัท b",
+    count: 14,
+    status: "escalated",
+    firstAskedAt: hoursAgo(240),
+    lastAskedAt: hoursAgo(2),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-tax-current-year",
+    question: "ปีภาษีปัจจุบันลดหย่อนรายการนี้ได้สูงสุดเท่าไร?",
+    normalizedQuestion: "ปีภาษีปัจจุบันลดหย่อนรายการนี้ได้สูงสุดเท่าไร",
+    count: 9,
+    status: "new",
+    firstAskedAt: hoursAgo(168),
+    lastAskedAt: hoursAgo(5),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-claim-provider-docs",
+    question: "เคสนี้ต้องใช้เอกสารเคลมของบริษัทคู่ค้าครบกี่รายการ?",
+    normalizedQuestion: "เคสนี้ต้องใช้เอกสารเคลมของบริษัทคู่ค้าครบกี่รายการ",
+    count: 7,
+    status: "new",
+    firstAskedAt: hoursAgo(120),
+    lastAskedAt: hoursAgo(8),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-process-exception",
+    question: "ข้ามขั้นตอนอนุมัติเพื่อให้ทันนัดลูกค้าพรุ่งนี้ได้ไหม?",
+    normalizedQuestion: "ข้ามขั้นตอนอนุมัติเพื่อให้ทันนัดลูกค้าพรุ่งนี้ได้ไหม",
+    count: 6,
+    status: "escalated",
+    firstAskedAt: hoursAgo(96),
+    lastAskedAt: hoursAgo(11),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-regional-event",
+    question: "งานสัมมนาต่างจังหวัดรอบหน้าต้องใช้สคริปต์เปิดงานเวอร์ชันไหน?",
+    normalizedQuestion: "งานสัมมนาต่างจังหวัดรอบหน้าต้องใช้สคริปต์เปิดงานเวอร์ชันไหน",
+    count: 5,
+    status: "new",
+    firstAskedAt: hoursAgo(72),
+    lastAskedAt: hoursAgo(14),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-foreign-language",
+    question: "ถ้าลูกค้าต้องการเอกสารภาษาอังกฤษ ทีมมี template ที่อนุมัติแล้วหรือยัง?",
+    normalizedQuestion: "ถ้าลูกค้าต้องการเอกสารภาษาอังกฤษ ทีมมี template ที่อนุมัติแล้วหรือยัง",
+    count: 4,
+    status: "new",
+    firstAskedAt: hoursAgo(64),
+    lastAskedAt: hoursAgo(18),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-legal-threat",
+    question: "ลูกค้าแจ้งว่าจะดำเนินการทางกฎหมาย ต้องส่งต่อใครเป็นคนแรก?",
+    normalizedQuestion: "ลูกค้าแจ้งว่าจะดำเนินการทางกฎหมาย ต้องส่งต่อใครเป็นคนแรก",
+    count: 3,
+    status: "escalated",
+    firstAskedAt: hoursAgo(48),
+    lastAskedAt: hoursAgo(20),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-cancel-refund",
+    question: "ถ้ายกเลิกภายในช่วงนี้ ลูกค้าจะได้เงินคืนเท่าไร?",
+    normalizedQuestion: "ถ้ายกเลิกภายในช่วงนี้ ลูกค้าจะได้เงินคืนเท่าไร",
+    count: 3,
+    status: "new",
+    firstAskedAt: hoursAgo(42),
+    lastAskedAt: hoursAgo(24),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-line-personal-data",
+    question: "ส่งรูปเอกสารลูกค้าเข้า LINE กลุ่มเพื่อให้ทีมช่วยดูได้ไหม?",
+    normalizedQuestion: "ส่งรูปเอกสารลูกค้าเข้า line กลุ่มเพื่อให้ทีมช่วยดูได้ไหม",
+    count: 2,
+    status: "dismissed",
+    firstAskedAt: hoursAgo(36),
+    lastAskedAt: hoursAgo(28),
+    resolvedKnowledgeItemId: null,
+  },
+  {
+    id: "gap-new-product-launch",
+    question: "ผลิตภัณฑ์ที่กำลังเปิดตัวมี talking points ที่ทีมอนุมัติแล้วหรือยัง?",
+    normalizedQuestion: "ผลิตภัณฑ์ที่กำลังเปิดตัวมี talking points ที่ทีมอนุมัติแล้วหรือยัง",
+    count: 2,
+    status: "new",
+    firstAskedAt: hoursAgo(30),
+    lastAskedAt: hoursAgo(29),
+    resolvedKnowledgeItemId: null,
+  },
+];

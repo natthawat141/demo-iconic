@@ -51,3 +51,4 @@ export const knowledgeGaps = sqliteTable("knowledge_gaps", {
 export type KnowledgeItem = typeof knowledgeItems.$inferSelect;
 export type NewKnowledgeItem = typeof knowledgeItems.$inferInsert;
 export type KnowledgeGap = typeof knowledgeGaps.$inferSelect;
+export type NewKnowledgeGap = typeof knowledgeGaps.$inferInsert;

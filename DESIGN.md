@@ -6,7 +6,7 @@
 
 **Register:** Product UI  
 **Color strategy:** Restrained  
-**Mood:** Grounded expertise with one confident, human accent
+**Mood:** Codex-like work tool restraint with one confident blue accent
 
 ## Color Palette
 
@@ -14,21 +14,21 @@ All implementation colors use OKLCH semantic tokens.
 
 ```css
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.995 0 0);
   --surface: oklch(0.975 0 0);
-  --surface-strong: oklch(0.94 0.006 24);
-  --foreground: oklch(0.19 0.015 24);
-  --muted-foreground: oklch(0.45 0.012 24);
-  --border: oklch(0.89 0.006 24);
+  --surface-strong: oklch(0.935 0 0);
+  --foreground: oklch(0.20 0.01 255);
+  --muted-foreground: oklch(0.46 0.01 255);
+  --border: oklch(0.89 0 0);
 
-  --primary: oklch(0.55 0.18 24);
-  --primary-hover: oklch(0.49 0.17 24);
+  --primary: oklch(0.55 0.17 255);
+  --primary-hover: oklch(0.50 0.16 255);
   --primary-foreground: oklch(1 0 0);
-  --primary-soft: oklch(0.95 0.025 24);
+  --primary-soft: oklch(0.955 0.012 255);
 
-  --accent: oklch(0.89 0.055 225);
-  --accent-strong: oklch(0.43 0.11 235);
-  --accent-foreground: oklch(0.22 0.035 235);
+  --accent: oklch(0.935 0 0);
+  --accent-strong: oklch(0.55 0.17 255);
+  --accent-foreground: oklch(0.23 0.01 255);
 
   --success: oklch(0.44 0.12 150);
   --success-soft: oklch(0.95 0.035 150);
@@ -36,11 +36,11 @@ All implementation colors use OKLCH semantic tokens.
   --warning-soft: oklch(0.96 0.04 75);
   --danger: oklch(0.52 0.18 28);
   --danger-soft: oklch(0.95 0.035 28);
-  --focus: oklch(0.53 0.14 235);
+  --focus: oklch(0.55 0.17 255);
 }
 ```
 
-Primary is reserved for the main action, selected navigation, and the Nong Fah identity mark. Blue is an informational counterpoint for evidence, citations, and knowledge context. Status never relies on color alone.
+Most surfaces and selected states stay neutral. Blue is reserved for primary actions, focus, active icons, evidence context, and the Nong Fah identity mark. Status never relies on color alone.
 
 ## Typography
 
@@ -56,12 +56,12 @@ Primary is reserved for the main action, selected navigation, and the Nong Fah i
 
 ## Layout
 
-- Desktop shell: 248px sidebar, fluid main content, optional 320–360px context panel.
+- Desktop shell: 224px sidebar, fluid main content, optional 320–360px context panel.
 - Chat content maximum width: 760px.
 - Knowledge list maximum width: 1180px.
 - Primary page padding: 24–32px desktop, 16px mobile.
 - Spacing rhythm: 4, 8, 12, 16, 24, 32, 48.
-- Sidebar collapses below 900px into a sheet opened from the top bar.
+- Sidebar collapses below 768px into a sheet opened from the top bar.
 - Avoid nesting bordered cards. Use surface changes, dividers, and whitespace to express hierarchy.
 
 ## Shape and Elevation
@@ -70,13 +70,13 @@ Primary is reserved for the main action, selected navigation, and the Nong Fah i
 - Panels/cards: 12–14px radius maximum.
 - Pills only for compact status and tags.
 - Prefer a border or a compact shadow, never both as decoration.
-- Main composer may use a short, tight elevation to separate it from the scrolling thread.
+- Main composer uses a defined border and focus ring rather than decorative elevation.
 
 ## Core Components
 
 ### App shell
 
-Quiet surface sidebar, strong current-location state, project identity, role switcher, and Prototype badge. Navigation labels are Thai-first and paired with Lucide icons.
+Quiet blue-neutral sidebar, soft current-location state, project identity, and provider/model context. Navigation labels are Thai-first and paired with restrained Lucide work-tool icons. Role switching belongs to separate product endpoints, not the primary shell.
 
 ### Chat composer
 
@@ -114,7 +114,7 @@ Question text is primary. Occurrence count, last asked time, and status are seco
 - Thai copy is concise, respectful, and operational.
 - Prefer `ยังไม่มีข้อมูลเพียงพอ` over technical phrases such as retrieval failure.
 - Avoid claiming certainty. Say what source was used and what happens next.
-- Mark all fixtures and presenter controls as Prototype/Demo.
+- Keep fixture/reset controls in a low-emphasis workspace utility area; do not label primary product surfaces as Prototype/Demo.
 
 ## Accessibility
 

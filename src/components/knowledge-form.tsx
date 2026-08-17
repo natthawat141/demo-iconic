@@ -5,6 +5,9 @@ import { Archive, ArrowLeft, CheckCircle2, Save } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { KnowledgeItemDto, KnowledgeStatus } from "@/lib/demo-types";
 import { KnowledgeStatusBadge } from "./status-badge";
 
@@ -118,49 +121,57 @@ export function KnowledgeForm({ item }: { item?: KnowledgeItemDto }) {
     router.refresh();
   }
 
-  const fieldClass =
-    "mt-1.5 min-h-11 w-full rounded-lg border bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring";
-
   return (
     <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-5">
         <div>
-          <Link href="/knowledge" className="mb-2 inline-flex min-h-9 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+          <Button
+            render={<Link href="/knowledge" />}
+            nativeButton={false}
+            variant="ghost"
+            size="sm"
+            className="mb-2 -ml-2 text-muted-foreground"
+          >
             <ArrowLeft className="size-4" /> กลับไปคลังความรู้
-          </Link>
+          </Button>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-balance text-2xl font-bold tracking-[-0.02em]">{isNew ? "เพิ่ม Knowledge" : "แก้ไข Knowledge"}</h1>
             <KnowledgeStatusBadge status={status} />
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             type="button"
             onClick={save}
             disabled={saving}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold hover:bg-muted disabled:opacity-60"
+            variant="outline"
+            size="lg"
+            className="h-11 px-4"
           >
             <Save className="size-4" /> {saving ? "กำลังบันทึก..." : "บันทึก Draft"}
-          </button>
+          </Button>
           {status !== "approved" ? (
-            <button
+            <Button
               type="button"
               onClick={() => changeStatus("approved")}
               disabled={saving || approvalMissing.length > 0}
               aria-describedby="approval-help"
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[oklch(0.49_0.17_24)] disabled:cursor-not-allowed disabled:opacity-50"
+              size="lg"
+              className="h-11 px-4"
             >
               <CheckCircle2 className="size-4" /> อนุมัติให้ AI ใช้
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               type="button"
               onClick={() => changeStatus("archived")}
               disabled={saving}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-foreground px-4 text-sm font-semibold text-background hover:bg-foreground/85 disabled:opacity-60"
+              variant="outline"
+              size="lg"
+              className="h-11 px-4"
             >
               <Archive className="size-4" /> Archive
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -168,36 +179,36 @@ export function KnowledgeForm({ item }: { item?: KnowledgeItemDto }) {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form onSubmit={(event) => { event.preventDefault(); void save(); }} className="space-y-5" aria-label="แบบฟอร์ม Knowledge">
           <label className="block text-sm font-semibold">ชื่อ Knowledge
-            <input className={fieldClass} value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="เช่น เมื่อลูกค้าขอปรึกษาคู่สมรสก่อน" required />
+            <Input className="mt-1.5 h-11" value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="เช่น เมื่อลูกค้าขอปรึกษาคู่สมรสก่อน" required />
           </label>
           <label className="block text-sm font-semibold">สรุปสั้น ๆ
-            <input className={fieldClass} value={form.summary} onChange={(event) => update("summary", event.target.value)} placeholder="บอกว่าน้องฟ้าจะใช้เนื้อหานี้ตอบเรื่องอะไร" required />
+            <Input className="mt-1.5 h-11" value={form.summary} onChange={(event) => update("summary", event.target.value)} placeholder="บอกว่าน้องฟ้าจะใช้เนื้อหานี้ตอบเรื่องอะไร" required />
           </label>
           <label className="block text-sm font-semibold">เนื้อหาที่อนุมัติ
-            <textarea className={`${fieldClass} min-h-56 resize-y py-3 leading-7`} value={form.content} onChange={(event) => update("content", event.target.value)} placeholder="เขียนแนวทาง ขั้นตอน และข้อจำกัดให้ชัดเจน" required />
+            <Textarea className="mt-1.5 min-h-56 py-3 leading-7" value={form.content} onChange={(event) => update("content", event.target.value)} placeholder="เขียนแนวทาง ขั้นตอน และข้อจำกัดให้ชัดเจน" required />
           </label>
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block text-sm font-semibold">หมวดหมู่
-              <input className={fieldClass} value={form.category} onChange={(event) => update("category", event.target.value)} placeholder="การติดตามลูกค้า" required />
+              <Input className="mt-1.5 h-11" value={form.category} onChange={(event) => update("category", event.target.value)} placeholder="การติดตามลูกค้า" required />
             </label>
             <label className="block text-sm font-semibold">Tags
-              <input className={fieldClass} value={form.tags} onChange={(event) => update("tags", event.target.value)} placeholder="follow-up, objection" />
+              <Input className="mt-1.5 h-11" value={form.tags} onChange={(event) => update("tags", event.target.value)} placeholder="follow-up, objection" />
             </label>
             <label className="block text-sm font-semibold">แหล่งที่มา
-              <input className={fieldClass} value={form.sourceLabel} onChange={(event) => update("sourceLabel", event.target.value)} placeholder="ICONIC Sales Playbook" required />
+              <Input className="mt-1.5 h-11" value={form.sourceLabel} onChange={(event) => update("sourceLabel", event.target.value)} placeholder="ICONIC Sales Playbook" required />
             </label>
             <label className="block text-sm font-semibold">เจ้าของความรู้
-              <input className={fieldClass} value={form.ownerName} onChange={(event) => update("ownerName", event.target.value)} placeholder="Founder Office" required />
+              <Input className="mt-1.5 h-11" value={form.ownerName} onChange={(event) => update("ownerName", event.target.value)} placeholder="Founder Office" required />
             </label>
             <label className="block text-sm font-semibold">วันที่ทบทวนครั้งถัดไป
-              <input type="date" className={fieldClass} value={form.reviewDate} onChange={(event) => update("reviewDate", event.target.value)} />
+              <Input type="date" className="mt-1.5 h-11" value={form.reviewDate} onChange={(event) => update("reviewDate", event.target.value)} />
             </label>
           </div>
         </form>
 
         <aside className="h-fit rounded-xl bg-muted p-5 lg:sticky lg:top-6">
           <p className="text-sm font-bold">ตัวอย่าง Source ที่ทีมจะเห็น</p>
-          <div className="mt-4 rounded-xl bg-background p-4">
+          <div className="mt-4 border-t border-border pt-4">
             <p className="text-xs font-semibold text-[oklch(0.43_0.11_235)]">แหล่งข้อมูลที่ใช้ตอบ</p>
             <p className="mt-1 text-sm font-semibold">{form.title || "ชื่อ Knowledge"}</p>
             <p className="mt-2 text-xs leading-5 text-muted-foreground">{form.sourceLabel || "แหล่งที่มา"} · {form.category || "หมวดหมู่"}</p>
@@ -213,4 +224,3 @@ export function KnowledgeForm({ item }: { item?: KnowledgeItemDto }) {
     </div>
   );
 }
-

@@ -1,5 +1,6 @@
 import { Archive, CheckCircle2, CircleDashed, Clock3, Send, XCircle } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import type { GapStatus, KnowledgeStatus } from "@/lib/demo-types";
 
 const knowledgeConfig = {
@@ -23,10 +24,10 @@ export function KnowledgeStatusBadge({ status }: { status: KnowledgeStatus }) {
   const config = knowledgeConfig[status];
   const Icon = config.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${config.className}`}>
+    <Badge className={config.className}>
       <Icon className="size-3.5" aria-hidden="true" />
       {config.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -34,9 +35,9 @@ export function GapStatusBadge({ status }: { status: GapStatus }) {
   const config = gapConfig[status];
   const Icon = config.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${config.className}`}>
+    <Badge className={config.className}>
       <Icon className="size-3.5" aria-hidden="true" />
       {config.label}
-    </span>
+    </Badge>
   );
 }
