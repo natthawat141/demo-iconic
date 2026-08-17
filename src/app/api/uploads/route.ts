@@ -1,8 +1,10 @@
 import { activityStorage } from "@/db/activity-storage";
 import { getDemoUserForRequest, withDemoSessionCookie } from "@/lib/chat-persistence";
 import {
+  analyzeUploadedPdf,
   analyzeUploadedSpreadsheet,
   classifyUpload,
+  pdfPrompt,
   spreadsheetPrompt,
   uploadToDemoBucket,
 } from "@/lib/file-uploads";
@@ -61,6 +63,19 @@ export async function POST(request: Request) {
       );
     }
   }
+  if (classified.mediaType === "application/pdf") {
+    try {
+      analysis = await analyzeUploadedPdf(file) as unknown as Record<string, unknown>;
+    } catch (error) {
+      return withDemoSessionCookie(
+        Response.json(
+          { error: error instanceof Error ? `อ่าน PDF ไม่สำเร็จ: ${error.message}` : "อ่าน PDF ไม่สำเร็จ" },
+          { status: 422 },
+        ),
+        setCookie,
+      );
+    }
+  }
 
   const id = crypto.randomUUID();
   try {
@@ -74,7 +89,7 @@ export async function POST(request: Request) {
       sizeBytes: file.size,
       objectPath: uploaded.objectPath,
       kind: classified.kind,
-      status: classified.kind === "spreadsheet" ? "analyzed" : "uploaded",
+      status: classified.kind === "spreadsheet" || classified.mediaType === "application/pdf" ? "analyzed" : "uploaded",
       analysis,
     });
   } catch (error) {
@@ -87,7 +102,9 @@ export async function POST(request: Request) {
 
   const prompt = classified.kind === "spreadsheet" && analysis
     ? spreadsheetPrompt(file.name, analysis as unknown as Parameters<typeof spreadsheetPrompt>[1])
-    : `ผู้ใช้แนบไฟล์ ${file.name} (${classified.mediaType}) แล้ว ช่วยยืนยันว่าได้รับไฟล์และบอกว่าพร้อมใช้ไฟล์นี้ประกอบการสนทนา`;
+    : classified.mediaType === "application/pdf" && analysis
+      ? pdfPrompt(file.name, analysis as unknown as Parameters<typeof pdfPrompt>[1])
+      : `ผู้ใช้แนบไฟล์ ${file.name} (${classified.mediaType}) แล้ว ช่วยยืนยันว่าได้รับไฟล์และบอกว่าพร้อมใช้ไฟล์นี้ประกอบการสนทนา`;
 
   return withDemoSessionCookie(
     Response.json({

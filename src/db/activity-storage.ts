@@ -438,6 +438,20 @@ export const activityStorage = {
     });
   },
 
+  async deleteConversation(id: string, userId: string) {
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const result = await getPostgresPool().query(
+        "DELETE FROM conversations WHERE id = $1 AND user_id = $2",
+        [id, userId],
+      );
+      return result.rowCount === 1;
+    }, () => {
+      ensureSqliteReady();
+      return sqlite.prepare("DELETE FROM conversations WHERE id = ? AND user_id = ?").run(id, userId).changes === 1;
+    });
+  },
+
   async createUploadedFile(file: NewUploadedFile) {
     const now = new Date();
     return withStore(async () => {
@@ -492,6 +506,37 @@ export const activityStorage = {
       ensureSqliteReady();
       const row = sqlite.prepare("SELECT * FROM uploaded_files WHERE id = ? LIMIT 1").get(id) as DatabaseRow | undefined;
       return row ? mapFile(row) : null;
+    });
+  },
+
+  async renameUploadedFile(id: string, userId: string, originalName: string): Promise<UploadedFile | null> {
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const result = await getPostgresPool().query<DatabaseRow>(
+        "UPDATE uploaded_files SET original_name = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+        [originalName, id, userId],
+      );
+      return result.rows[0] ? mapFile(result.rows[0]) : null;
+    }, () => {
+      ensureSqliteReady();
+      const result = sqlite.prepare("UPDATE uploaded_files SET original_name = ? WHERE id = ? AND user_id = ?").run(originalName, id, userId);
+      if (result.changes !== 1) return null;
+      const row = sqlite.prepare("SELECT * FROM uploaded_files WHERE id = ?").get(id) as DatabaseRow | undefined;
+      return row ? mapFile(row) : null;
+    });
+  },
+
+  async deleteUploadedFile(id: string, userId: string) {
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const result = await getPostgresPool().query(
+        "DELETE FROM uploaded_files WHERE id = $1 AND user_id = $2",
+        [id, userId],
+      );
+      return result.rowCount === 1;
+    }, () => {
+      ensureSqliteReady();
+      return sqlite.prepare("DELETE FROM uploaded_files WHERE id = ? AND user_id = ?").run(id, userId).changes === 1;
     });
   },
 

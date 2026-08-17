@@ -4,14 +4,26 @@ import { Storage } from "@google-cloud/storage";
 import { OAuth2Client } from "google-auth-library";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import { extractText, getDocumentProxy } from "unpdf";
 import * as XLSX from "xlsx";
 
 import { analyzeTabularData } from "@/lib/tabular-analysis";
 import type { TabularCell } from "@/lib/tabular-analysis";
 
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const MAX_PDF_STORED_CHARACTERS = 60_000;
+const MAX_PDF_PROMPT_CHARACTERS = 24_000;
 
 type UploadKind = "image" | "spreadsheet" | "document";
+
+export type PdfDocumentAnalysis = {
+  kind: "pdf";
+  pageCount: number;
+  extractedText: string;
+  extractedCharacters: number;
+  truncated: boolean;
+  caveats: string[];
+};
 
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const spreadsheetTypes = new Set([
@@ -106,6 +118,12 @@ export async function downloadFromDemoBucket(objectPath: string) {
   return contents;
 }
 
+export async function deleteFromDemoBucket(objectPath: string) {
+  const bucketName = process.env.GCS_UPLOAD_BUCKET?.trim();
+  if (!bucketName) throw new Error("ยังไม่ได้ตั้งค่า GCS_UPLOAD_BUCKET");
+  await getStorage().bucket(bucketName).file(objectPath).delete({ ignoreNotFound: true });
+}
+
 export async function analyzeUploadedSpreadsheet(file: File) {
   const extension = extensionFor(file);
   if (extension === ".csv") {
@@ -130,6 +148,40 @@ export async function analyzeUploadedSpreadsheet(file: File) {
     })),
   }));
   return analyzeTabularData({ format: "workbook", sheets });
+}
+
+function normalizePdfText(value: string) {
+  return value
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\t\f\v ]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export async function analyzeUploadedPdf(file: File): Promise<PdfDocumentAnalysis> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let pdf: Awaited<ReturnType<typeof getDocumentProxy>> | undefined;
+  try {
+    pdf = await getDocumentProxy(bytes);
+    const extracted = await extractText(pdf, { mergePages: true });
+    const text = normalizePdfText(extracted.text);
+    const truncated = text.length > MAX_PDF_STORED_CHARACTERS;
+    const extractedText = text.slice(0, MAX_PDF_STORED_CHARACTERS);
+    const caveats: string[] = [];
+    if (!extractedText) caveats.push("ไม่พบข้อความที่เลือกอ่านได้ใน PDF นี้ อาจเป็นเอกสารสแกนหรือรูปภาพ");
+    if (truncated) caveats.push("เก็บข้อความส่วนต้นไว้เพื่อใช้ประกอบการสนทนาเท่านั้น เพราะเอกสารมีความยาวมาก");
+    return {
+      kind: "pdf",
+      pageCount: extracted.totalPages,
+      extractedText,
+      extractedCharacters: text.length,
+      truncated,
+      caveats,
+    };
+  } finally {
+    await pdf?.destroy().catch(() => undefined);
+  }
 }
 
 export async function uploadToDemoBucket(input: {
@@ -164,4 +216,17 @@ export function spreadsheetPrompt(fileName: string, analysis: ReturnType<typeof 
     `ข้อเสนอกราฟ: ${chart}`,
     "ช่วยอธิบายสิ่งที่อ่านได้อย่างกระชับ โดยบอกข้อจำกัดของข้อมูลถ้ามี และอย่าสรุปเกินกว่าข้อมูลนี้",
   ].join("\n");
+}
+
+export function pdfPrompt(fileName: string, analysis: PdfDocumentAnalysis) {
+  const text = analysis.extractedText.slice(0, MAX_PDF_PROMPT_CHARACTERS);
+  const caveats = analysis.caveats.length > 0 ? `ข้อจำกัด: ${analysis.caveats.join(" ")}` : "";
+  return [
+    `ผู้ใช้แนบ PDF ชื่อ ${fileName} (${analysis.pageCount} หน้า)`,
+    text
+      ? "ข้อความที่ระบบสกัดได้จาก PDF:\n---\n" + text + "\n---"
+      : "PDF นี้ไม่มีข้อความที่ระบบสกัดได้",
+    caveats,
+    "ตอบจากข้อความในเอกสารนี้และคำถามของผู้ใช้เท่านั้น หากข้อมูลไม่พอให้บอกอย่างตรงไปตรงมา",
+  ].filter(Boolean).join("\n\n");
 }

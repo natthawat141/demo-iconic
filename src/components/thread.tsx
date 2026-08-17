@@ -295,7 +295,7 @@ const AssistantActionBar: FC = () => (
 );
 
 const UserFilePart: FileMessagePartComponent = (part) => <div className="py-1"><File {...part} /></div>;
-const UserImagePart: ImageMessagePartComponent = (part) => <div className="py-1"><Image {...part} /></div>;
+const UserImagePart: ImageMessagePartComponent = (part) => <div className="py-1 [&_[data-slot=image-preview]]:min-h-0 [&_[data-slot=image-root]]:max-w-36 [&_img]:max-h-36 [&_img]:w-auto"><Image {...part} /></div>;
 
 const UserMessage: FC = () => (
   <MessagePrimitive.Root data-slot="aui_user-message-root" className="fade-in slide-in-from-bottom-1 animate-in flex flex-col items-end gap-2 duration-150" data-role="user">

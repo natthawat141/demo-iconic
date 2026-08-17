@@ -18,7 +18,7 @@ import {
   type ChatPersistence,
 } from "@/lib/chat-persistence";
 import { ambiguousContextReply, classifyChatIntent, conversationalReply } from "@/lib/chat-intent";
-import { spreadsheetPrompt } from "@/lib/file-uploads";
+import { pdfPrompt, spreadsheetPrompt } from "@/lib/file-uploads";
 import {
   getKnowledgeOverview,
   recordKnowledgeGap,
@@ -127,7 +127,10 @@ async function prepareModelMessages(
     .filter((url) => uploadIdPattern.test(url)))];
   const resolved = await Promise.all(ids.map(async (id) => {
     const file = await activityStorage.getUploadedFile(id);
-    if (!file || file.userId !== userId) throw new Error("ไม่พบไฟล์ที่อัปโหลด หรือไฟล์นี้ไม่ใช่ของผู้ใช้ปัจจุบัน");
+    // A user can delete an older attachment while keeping the chat history.
+    // Do not make that old thread impossible to continue, and never disclose
+    // whether an arbitrary ID belongs to another user.
+    if (!file || file.userId !== userId) return null;
     return {
       id: file.id,
       filename: file.originalName,
@@ -137,20 +140,23 @@ async function prepareModelMessages(
     } satisfies UploadedFileContext;
   }));
   await activityStorage.linkUploadedFilesToConversation(ids, userId, conversationId);
-  const byId = new Map(resolved.map((file) => [file.id, file]));
+  const uploadedFiles = resolved.filter((file): file is UploadedFileContext => file !== null);
+  const byId = new Map(uploadedFiles.map((file) => [file.id, file]));
   const modelMessages = messages.map((message) => ({
     ...message,
     parts: message.parts.flatMap((part) => {
       if (part.type !== "file" || ALLOWED_IMAGE_TYPES.has(part.mediaType)) return [part];
       const file = byId.get(part.url);
-      if (!file) return [{ type: "text" as const, text: "ผู้ใช้แนบไฟล์ที่ระบบไม่สามารถอ่านรายละเอียดได้" }];
+      if (!file) return [{ type: "text" as const, text: `ไฟล์ที่เคยแนบ${part.filename ? ` (${part.filename})` : ""} ไม่อยู่ในคลังแล้ว จึงไม่ใช้ไฟล์นั้นประกอบคำตอบนี้` }];
       const text = file.kind === "spreadsheet" && file.analysis
         ? spreadsheetPrompt(file.filename, file.analysis as unknown as Parameters<typeof spreadsheetPrompt>[1])
-        : `ผู้ใช้แนบไฟล์ ${file.filename} (${file.mediaType}) แล้ว ขณะนี้ระบบจัดเก็บไฟล์เรียบร้อย แต่ยังไม่มีการสกัดเนื้อหาเอกสารสำหรับเดโมนี้`;
+        : file.mediaType === "application/pdf" && file.analysis
+          ? pdfPrompt(file.filename, file.analysis as unknown as Parameters<typeof pdfPrompt>[1])
+          : `ผู้ใช้แนบไฟล์ ${file.filename} (${file.mediaType}) แล้ว ขณะนี้ระบบจัดเก็บไฟล์เรียบร้อย แต่ยังไม่มีการสกัดเนื้อหาเอกสารสำหรับเดโมนี้`;
       return [{ type: "text" as const, text }];
     }),
   })) as UIMessage[];
-  return { modelMessages, uploadedFiles: resolved };
+  return { modelMessages, uploadedFiles };
 }
 
 function writeFileAnalyses(
@@ -387,6 +393,7 @@ export async function POST(request: Request) {
 - คุยเรื่องทั่วไป คำทักทาย คำขอบคุณ หรือคำถามเกี่ยวกับตัวคุณได้โดยไม่ต้องเปิดคลังความรู้
 - ถ้ามีรูปแนบ ให้ดูรูปและตอบคำถามเกี่ยวกับสิ่งที่มองเห็นได้โดยตรง ไม่ต้องเปิดคลังความรู้ เว้นแต่ผู้ใช้ถามว่าสิ่งในรูปสัมพันธ์กับขั้นตอนหรือนโยบายของ ICONIC อย่างไร
 - ถ้ามีไฟล์ตารางแนบ ระบบได้อ่านโครงสร้าง ตารางสรุป และกราฟที่สร้างได้ให้แล้ว ใช้เฉพาะข้อมูลที่ระบุในข้อความของผู้ใช้และบอกข้อจำกัดที่เกี่ยวข้อง
+- ถ้ามี PDF แนบ ระบบได้สกัดข้อความจากเอกสารไว้ในข้อความประกอบแล้ว ใช้ข้อความนั้นตอบคำถามได้ แต่ถ้าเอกสารเป็นไฟล์สแกนที่ไม่มีข้อความ ให้บอกข้อจำกัดนี้อย่างตรงไปตรงมา
 - ถ้าคำถามกำกวมจนยังไม่รู้ว่าเกี่ยวกับ ICONIC หรือเป็นเรื่องทั่วไป ให้ถามกลับสั้นๆ หนึ่งคำถามแทนการเปิดคลังทุกอย่าง
 - เมื่อผู้ใช้ถามขั้นตอน นโยบาย แนวทางขาย การดูแลลูกค้า หรือข้อเท็จจริงของ ICONIC ให้เรียก searchKnowledge ก่อนตอบเสมอ
 - เมื่อผู้ใช้ขอกราฟ chart dashboard สถิติ หรือภาพรวม ให้เรียก showKnowledgeOverview

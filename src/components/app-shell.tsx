@@ -13,12 +13,14 @@ import {
   Menu,
   MessageSquareText,
   MessagesSquare,
+  MoreHorizontal,
   Moon,
   Plus,
   RotateCcw,
   Settings2,
   ShieldCheck,
   Sun,
+  Trash2,
   UserRound,
   UsersRound,
   X,
@@ -76,9 +78,11 @@ function historyTimestamp(value: string) {
 function ConversationHistoryItem({
   conversation,
   onNavigate,
+  onDelete,
 }: {
   conversation: ConversationSummary;
   onNavigate: () => void;
+  onDelete: (conversation: ConversationSummary) => void;
 }) {
   const startX = useRef<number | null>(null);
   const [revealTime, setRevealTime] = useState(false);
@@ -112,7 +116,8 @@ function ConversationHistoryItem({
   }
 
   return (
-    <Link
+    <div className="group relative">
+      <Link
       href={`/?conversation=${encodeURIComponent(conversation.id)}`}
       onClick={handleClick}
       onPointerDown={handlePointerDown}
@@ -121,22 +126,39 @@ function ConversationHistoryItem({
       onPointerCancel={resetSwipe}
       aria-label={`${conversation.title} · ${historyTimestamp(conversation.updatedAt)}`}
       className={cn(
-        "group relative flex min-h-10 items-center overflow-hidden rounded-lg px-2.5 pr-13 text-left text-xs text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-sidebar-ring/25 touch-pan-y",
+        "relative flex min-h-10 w-full items-center overflow-hidden rounded-lg px-2.5 pr-13 text-left text-xs text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-sidebar-ring/25 touch-pan-y",
         revealTime && "bg-sidebar-accent/60",
       )}
       title={conversation.title}
-    >
-      <span className={cn("block min-w-0 flex-1 truncate transition-transform duration-150", revealTime && "translate-x-2")}>{conversation.title}</span>
-      <span
+      >
+        <span className={cn("block min-w-0 flex-1 truncate transition-transform duration-150", revealTime && "translate-x-2")}>{conversation.title}</span>
+        <span
         aria-hidden="true"
         className={cn(
           "pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 translate-x-2 font-mono text-[10px] tabular-nums text-muted-foreground opacity-0 transition-all duration-150 group-focus-visible:translate-x-0 group-focus-visible:opacity-100",
           revealTime && "translate-x-0 opacity-100",
         )}
-      >
-        {historyTimestamp(conversation.updatedAt)}
-      </span>
-    </Link>
+        >
+          {historyTimestamp(conversation.updatedAt)}
+        </span>
+      </Link>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button type="button" variant="ghost" size="icon-sm" aria-label={`จัดการบทสนทนา ${conversation.title}`} />}
+          className={cn(
+            "absolute right-1 top-1/2 z-10 -translate-y-1/2 bg-sidebar opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100",
+            revealTime && "pointer-events-none opacity-0",
+          )}
+        >
+          <MoreHorizontal className="size-3.5" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-32">
+          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete(conversation)}>
+            <Trash2 className="size-3.5" /> ลบแชต
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 
@@ -173,6 +195,16 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
     router.push(`/?new=${crypto.randomUUID()}`);
   }
 
+  async function deleteConversation(conversation: ConversationSummary) {
+    if (!window.confirm(`ลบบทสนทนา “${conversation.title}” หรือไม่? ข้อความในแชตนี้จะหายไป`)) return;
+    const response = await fetch(`/api/conversations/${conversation.id}`, { method: "DELETE" });
+    if (!response.ok) return;
+    const activeConversation = new URL(window.location.href).searchParams.get("conversation") === conversation.id;
+    setConversations((current) => current.filter((item) => item.id !== conversation.id));
+    window.dispatchEvent(new Event("iconic:conversation-updated"));
+    if (activeConversation) router.push(`/?new=${crypto.randomUUID()}`);
+  }
+
   return (
     <section className="mt-7" aria-label="บทสนทนาล่าสุด">
       <div className="mb-2 flex items-center justify-between px-2">
@@ -186,7 +218,7 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
           <p className="px-2.5 py-2 text-xs text-muted-foreground">กำลังโหลด...</p>
         ) : conversations.length === 0 ? (
           <p className="px-2.5 py-2 text-xs leading-5 text-muted-foreground">เริ่มถามเพื่อเก็บบทสนทนาไว้ที่นี่</p>
-        ) : conversations.map((conversation) => <ConversationHistoryItem key={conversation.id} conversation={conversation} onNavigate={onNavigate} />)}
+        ) : conversations.map((conversation) => <ConversationHistoryItem key={conversation.id} conversation={conversation} onNavigate={onNavigate} onDelete={deleteConversation} />)}
       </div>
     </section>
   );

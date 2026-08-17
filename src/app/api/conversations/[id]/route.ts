@@ -29,3 +29,20 @@ export async function GET(
     messages: toHistoryMessages(detail),
   }), setCookie);
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const { userId, setCookie } = await getDemoUserForRequest(request);
+  if (!isValidDemoIdentifier(id)) {
+    return withDemoSessionCookie(Response.json({ error: "ไม่พบบทสนทนา" }, { status: 404 }), setCookie);
+  }
+
+  const deleted = await activityStorage.deleteConversation(id, userId);
+  if (!deleted) {
+    return withDemoSessionCookie(Response.json({ error: "ไม่พบบทสนทนา" }, { status: 404 }), setCookie);
+  }
+  return withDemoSessionCookie(Response.json({ deleted: true }), setCookie);
+}
