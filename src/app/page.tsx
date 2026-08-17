@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { auth } from "@clerk/nextjs/server";
 
 import { Assistant } from "./assistant";
 import { activityStorage } from "@/db/activity-storage";
@@ -13,8 +14,9 @@ export default async function Home({
   searchParams: Promise<{ conversation?: string; new?: string }>;
 }) {
   const { conversation: requestedConversationId, new: newThreadKey } = await searchParams;
+  const { userId: clerkUserId } = await auth();
   const cookieStore = await cookies();
-  const userId = cookieStore.get(DEMO_USER_COOKIE)?.value;
+  const userId = clerkUserId ?? cookieStore.get(DEMO_USER_COOKIE)?.value;
   const canLoadConversation = isValidDemoIdentifier(userId) && isValidDemoIdentifier(requestedConversationId);
   const detail = canLoadConversation ? await activityStorage.getConversation(requestedConversationId!) : null;
   const conversation = detail?.conversation.userId === userId ? detail : null;

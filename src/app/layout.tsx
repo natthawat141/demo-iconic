@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Noto_Sans_Thai } from "next/font/google";
@@ -37,17 +38,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${notoSansThai.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <ThemeProvider>
-          <TooltipProvider>
-            <AppShell
-              modelId={modelId}
-              liveModel={liveModel}
-              databaseLabel={databaseLabel}
-            >
-              {children}
-            </AppShell>
-          </TooltipProvider>
-        </ThemeProvider>
+        <ClerkProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              <AppShell
+                modelId={modelId}
+                liveModel={liveModel}
+                databaseLabel={databaseLabel}
+              >
+                {children}
+              </AppShell>
+            </TooltipProvider>
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

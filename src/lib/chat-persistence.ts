@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { UIMessage } from "ai";
+import { auth } from "@clerk/nextjs/server";
 
 import { activityStorage } from "@/db/activity-storage";
 import type { AnswerSource, ConversationMessage, StoredAttachment } from "@/db/activity-types";
@@ -68,6 +69,12 @@ export type ChatPersistence = {
 };
 
 export async function getDemoUserForRequest(request: Request) {
+  const { userId: clerkUserId } = await auth();
+  if (clerkUserId) {
+    await activityStorage.ensureUser(clerkUserId);
+    return { userId: clerkUserId, setCookie: null };
+  }
+
   const cookieUser = cookieValue(request, DEMO_USER_COOKIE);
   const userId = isValidDemoIdentifier(cookieUser) ? cookieUser! : `demo_${crypto.randomUUID()}`;
   await activityStorage.ensureUser(userId);

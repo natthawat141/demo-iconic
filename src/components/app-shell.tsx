@@ -27,6 +27,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent, type PropsWithChildren } from "react";
@@ -304,7 +305,7 @@ export function AppShell({
     pathname.startsWith("/knowledge") ||
     pathname.startsWith("/gaps");
 
-  if (pathname.startsWith("/login")) {
+  if (pathname.startsWith("/login") || pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up")) {
     return <main className="min-h-dvh bg-background">{children}</main>;
   }
 
@@ -462,6 +463,17 @@ export function AppShell({
               <span className="max-w-56 truncate" title={modelId}>{modelId}</span>
             </div>
             <ThemeButton />
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <Button type="button" variant="ghost" size="sm" className="hidden h-9 sm:inline-flex">เข้าสู่ระบบ</Button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button type="button" size="sm" className="hidden h-9 sm:inline-flex">สมัครใช้เดโม</Button>
+              </SignUpButton>
+            </Show>
+            <Show when="signed-in">
+              <UserButton appearance={{ elements: { avatarBox: "size-8" } }} />
+            </Show>
             <Button render={<Link href={switchHref} />} nativeButton={false} variant={adminMode ? "outline" : "secondary"} size="sm" className="hidden h-9 sm:flex">
               {adminMode ? <UserRound className="size-3.5" /> : <ShieldCheck className="size-3.5" />}
               {adminMode ? "โหมดทีม" : "Admin"}
