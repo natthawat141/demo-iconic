@@ -17,6 +17,7 @@ Demo บน Cloud Run: [iconic-knowledge-assistant](https://iconic-knowledge-ass
 - เขียน Markdown, โค้ดหรือสคริปต์สั้นจากชื่อคอลัมน์ที่อ่านได้จริง
 - ฟังคำตอบภาษาไทย/อังกฤษผ่าน Web Speech API ของเบราว์เซอร์
 - Clerk sign in/sign up และประวัติแชต/ไฟล์/usage แยกตาม user ID
+- ความจำข้ามบทสนทนาแบบ per-user: เพิ่ม/ตรวจ/ลบได้ที่ `/memory` และค้นเฉพาะบริบทที่เกี่ยวข้องก่อนตอบ
 - Admin workspace: ผู้ใช้, บทสนทนา, ไฟล์, token/model usage, Knowledge lifecycle, gaps และ Admin AI
 - Hybrid Knowledge retrieval: OpenRouter embeddings + lexical Thai matching; PostgreSQL ใช้ pgvector และ HNSW candidate search
 
@@ -89,3 +90,5 @@ Health endpoint: `/api/health`
 มี `Dockerfile` แบบ Next.js standalone สำหรับ Cloud Run และไฟล์ ignore ที่ไม่ส่ง `.env`, SQLite, build cache หรือ dependencies เข้า Cloud Build ดูขั้นตอนและ IAM ที่ [docs/GCP_CLOUD_RUN.md](./docs/GCP_CLOUD_RUN.md)
 
 ขอบเขต UX อยู่ที่ [docs/UX_IMPLEMENTATION_PLAN.md](./docs/UX_IMPLEMENTATION_PLAN.md) และรายการที่เลื่อนไป production อยู่ที่ [docs/PRODUCTION_DEFERRED.md](./docs/PRODUCTION_DEFERRED.md)
+
+รายละเอียด memory, privacy boundary และสิ่งที่ตั้งใจเลื่อนไป production อยู่ที่ [docs/USER_MEMORY.md](./docs/USER_MEMORY.md)

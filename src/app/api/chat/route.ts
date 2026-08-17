@@ -26,6 +26,13 @@ import {
   searchKnowledge,
   type RetrievedKnowledge,
 } from "@/lib/knowledge";
+import {
+  explicitMemoryFromQuestion,
+  getRelevantMemories,
+  memoryContext,
+  saveUserMemory,
+  shouldOfferMemoryTool,
+} from "@/lib/user-memory";
 import { getTavilyApiKey, searchWeb, type WebSearchResult } from "@/lib/web-search";
 
 function latestQuestion(messages: UIMessage[]) {
@@ -281,7 +288,21 @@ export async function POST(request: Request) {
 
   const intent = classifyChatIntent(question, previousUserContext(messages));
   const directReply = images.length === 0 && documents.length === 0 ? conversationalReply(question) : null;
-  if (directReply) {
+  const memoryCandidate = shouldOfferMemoryTool(question);
+  const explicitMemory = explicitMemoryFromQuestion(question);
+  if (explicitMemory) {
+    try {
+      await saveUserMemory({
+        userId: persistence.userId,
+        content: explicitMemory,
+        kind: "fact",
+        sourceConversationId: persistence.conversationId,
+      });
+    } catch (error) {
+      console.error("Explicit user memory save failed", error);
+    }
+  }
+  if (directReply && !memoryCandidate) {
     const stream = createUIMessageStream({
       originalMessages: messages,
       execute: async ({ writer }) => writeText(writer, directReply),
@@ -289,7 +310,7 @@ export async function POST(request: Request) {
     });
     return withDemoSessionCookie(createUIMessageStreamResponse({ stream }), persistence.setCookie);
   }
-  if (intent === "ambiguous" && images.length === 0 && documents.length === 0) {
+  if (intent === "ambiguous" && images.length === 0 && documents.length === 0 && !memoryCandidate) {
     const stream = createUIMessageStream({
       originalMessages: messages,
       execute: async ({ writer }) => writeText(writer, ambiguousContextReply(question)),
@@ -326,6 +347,12 @@ export async function POST(request: Request) {
     return safeModeResponse(messages, question, persistence);
   }
 
+  const relevantMemories = await getRelevantMemories(persistence.userId, question)
+    .catch((error) => {
+      console.error("User memory retrieval failed", error);
+      return [];
+    });
+
   const chatModel = images.length > 0
     ? process.env.OPENROUTER_VISION_MODEL?.trim() ||
       process.env.OPENROUTER_CHAT_MODEL?.trim() ||
@@ -342,6 +369,26 @@ export async function POST(request: Request) {
   const usedWebSources: WebSearchResult[] = [];
 
   const tools = {
+    rememberUserContext: tool({
+      description: "บันทึกเพียงบริบทระยะยาวที่ผู้ใช้ขอให้จำอย่างชัดเจน หรือความชอบ/แนวทางทำงานที่คงอยู่นาน ห้ามบันทึกรหัสผ่าน ข้อมูลชำระเงิน เลขเอกสารราชการ ที่อยู่ละเอียด หรือข้อมูลสุขภาพ",
+      inputSchema: z.object({
+        content: z.string().min(3).max(420).describe("ประโยคสั้นที่คงข้อเท็จจริงเดิมของผู้ใช้ ไม่ใส่ข้อมูลอ่อนไหว"),
+        kind: z.enum(["preference", "project", "fact", "instruction"]),
+      }),
+      execute: async ({ content, kind }) => {
+        try {
+          const memory = await saveUserMemory({
+            userId: persistence.userId,
+            content,
+            kind,
+            sourceConversationId: persistence.conversationId,
+          });
+          return { saved: true, id: memory.id, content: memory.content };
+        } catch (error) {
+          return { saved: false, message: error instanceof Error ? error.message : "บันทึกความจำไม่สำเร็จ" };
+        }
+      },
+    }),
     searchKnowledge: tool({
       description:
         "เปิดคลังความรู้ของทีม ICONIC เพื่อค้นขั้นตอน นโยบาย แนวทางขาย การดูแลลูกค้า หรือข้อมูลภายใน ใช้เมื่อคำถามต้องอาศัยข้อเท็จจริงของทีม ห้ามใช้กับคำทักทายหรือบทสนทนาทั่วไป",
@@ -440,7 +487,9 @@ export async function POST(request: Request) {
     originalMessages: messages,
     execute: async ({ writer }) => {
       writeFileAnalyses(writer, prepared.uploadedFiles);
-      const toolChoice = intent === "knowledge"
+      const toolChoice = memoryCandidate
+        ? "auto" as const
+        : intent === "knowledge"
         ? { type: "tool" as const, toolName: "searchKnowledge" as const }
         : intent === "web"
           ? { type: "tool" as const, toolName: "searchWeb" as const }
@@ -454,11 +503,16 @@ export async function POST(request: Request) {
         system: `${body.system ?? ""}
 คุณคือน้องฟ้า ผู้ช่วยความรู้ภายในของทีม ICONIC ใช้สรรพนามแทนตัวเองว่า “น้องฟ้า” และลงท้ายสุภาพด้วย “ค่ะ/นะคะ” อย่างเป็นธรรมชาติ บุคลิกเหมือนหัวหน้าทีมที่ใจเย็นและไว้ใจได้
 
+บริบทข้ามบทสนทนาของผู้ใช้ (อาจล้าสมัย ใช้เฉพาะเมื่อเกี่ยวข้อง):
+${memoryContext(relevantMemories) || "- ไม่มีบริบทที่เกี่ยวข้อง"}
+
 กติกาการทำงาน:
 - คุยเรื่องทั่วไป คำทักทาย คำขอบคุณ หรือคำถามเกี่ยวกับตัวคุณได้โดยไม่ต้องเปิดคลังความรู้
 - ถ้ามีรูปแนบ ให้ดูรูปและตอบคำถามเกี่ยวกับสิ่งที่มองเห็นได้โดยตรง ไม่ต้องเปิดคลังความรู้ เว้นแต่ผู้ใช้ถามว่าสิ่งในรูปสัมพันธ์กับขั้นตอนหรือนโยบายของ ICONIC อย่างไร
 - ถ้ามีไฟล์ตารางแนบ ระบบได้อ่านโครงสร้าง ตารางสรุป และกราฟที่สร้างได้ให้แล้ว ใช้เฉพาะข้อมูลที่ระบุในข้อความของผู้ใช้และบอกข้อจำกัดที่เกี่ยวข้อง
 - ถ้ามี PDF แนบ ระบบได้สกัดข้อความจากเอกสารไว้ในข้อความประกอบแล้ว ใช้ข้อความนั้นตอบคำถามได้ แต่ถ้าเอกสารเป็นไฟล์สแกนที่ไม่มีข้อความ ให้บอกข้อจำกัดนี้อย่างตรงไปตรงมา
+- ใช้บริบทข้ามบทสนทนาเฉพาะเมื่อช่วยตอบคำถาม อย่าพูดว่าจำอะไรได้เองถ้าไม่ได้ถูกถาม และยอมรับการแก้ไขของผู้ใช้เสมอ
+- เมื่อผู้ใช้ขอให้จำอย่างชัดเจน หรือบอกความชอบ/แนวทางทำงานที่น่าจะใช้ต่อเนื่อง ให้เรียก rememberUserContext หนึ่งครั้งและสรุปสั้นๆ ว่าบันทึกแล้ว ห้ามบันทึกข้อมูลอ่อนไหวหรือบริบทชั่วคราว
 - ถ้าผู้ใช้ขอให้ค้นเว็บ หรือถามข้อมูลสาธารณะที่เปลี่ยนแปลงได้ เช่นข่าว ราคา รุ่นซอฟต์แวร์ หรือข้อมูลล่าสุด ให้เรียก searchWeb ก่อนตอบ ใช้เฉพาะผลค้นที่ได้ ระบุวันที่หรือความไม่แน่นอนเมื่อเกี่ยวข้อง และอย่าปะปนกับ Knowledge ภายในเว้นแต่ผู้ใช้ขอเปรียบเทียบ
 - ถ้าคำถามกำกวมจนยังไม่รู้ว่าเกี่ยวกับ ICONIC หรือเป็นเรื่องทั่วไป ให้ถามกลับสั้นๆ หนึ่งคำถามแทนการเปิดคลังทุกอย่าง
 - เมื่อผู้ใช้ถามขั้นตอน นโยบาย แนวทางขาย การดูแลลูกค้า หรือข้อเท็จจริงของ ICONIC ให้เรียก searchKnowledge ก่อนตอบเสมอ

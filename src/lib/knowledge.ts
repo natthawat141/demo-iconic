@@ -163,6 +163,12 @@ async function createEmbeddings(values: string[], modelKey: string) {
   }
 }
 
+/** Reusable semantic embedding with the same provider/fallback as Knowledge. */
+export async function createSemanticEmbedding(value: string) {
+  const { vectors, modelKey } = await createEmbeddings([value], requestedModelKey());
+  return { vector: vectors[0] ?? localEmbedding(value), modelKey };
+}
+
 export async function rebuildKnowledgeIndex(force = false) {
   const approvedItems = await storage.listApprovedKnowledge();
   const existing = await storage.listChunks();

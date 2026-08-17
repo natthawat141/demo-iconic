@@ -12,7 +12,9 @@ import type {
   ConversationMessage,
   DemoUser,
   ModelUsageOverview,
+  NewUserMemory,
   NewUploadedFile,
+  UserMemory,
   UploadedFile,
 } from "./activity-types";
 
@@ -93,6 +95,33 @@ function mapFile(row: DatabaseRow): UploadedFile {
     status: row.status as UploadedFile["status"],
     analysis: parseJson<Record<string, unknown> | null>(row.analysis, null),
     createdAt: date(row.created_at),
+  };
+}
+
+function parseVector(value: unknown): number[] | null {
+  if (Array.isArray(value)) return value.map(Number);
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed.map(Number) : null;
+  } catch {
+    return null;
+  }
+}
+
+function mapUserMemory(row: DatabaseRow): UserMemory {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    content: String(row.content),
+    kind: row.kind as UserMemory["kind"],
+    sourceConversationId: row.source_conversation_id == null ? null : String(row.source_conversation_id),
+    sourceMessageId: row.source_message_id == null ? null : String(row.source_message_id),
+    embedding: parseVector(row.embedding),
+    embeddingModel: row.embedding_model == null ? null : String(row.embedding_model),
+    createdAt: date(row.created_at),
+    updatedAt: date(row.updated_at),
+    lastUsedAt: row.last_used_at == null ? null : date(row.last_used_at),
   };
 }
 
@@ -188,12 +217,26 @@ async function ensurePostgresReady() {
         total_tokens BIGINT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS user_memories (
+        id VARCHAR(128) PRIMARY KEY,
+        user_id VARCHAR(128) NOT NULL REFERENCES demo_users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        kind VARCHAR(24) NOT NULL,
+        source_conversation_id VARCHAR(128) NULL REFERENCES conversations(id) ON DELETE SET NULL,
+        source_message_id VARCHAR(128) NULL REFERENCES conversation_messages(id) ON DELETE SET NULL,
+        embedding vector NULL,
+        embedding_model VARCHAR(191) NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        last_used_at TIMESTAMPTZ NULL
+      );
       CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC);
       CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON conversation_messages(conversation_id, created_at);
       CREATE INDEX IF NOT EXISTS idx_files_user_created ON uploaded_files(user_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_feedback_message ON answer_feedback(message_id);
       CREATE INDEX IF NOT EXISTS idx_model_usage_model_created ON model_usage(model_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_model_usage_user_created ON model_usage(user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_user_memories_user_updated ON user_memories(user_id, updated_at DESC);
     `);
   })();
   return postgresReady;
@@ -260,12 +303,26 @@ function ensureSqliteReady() {
       total_tokens INTEGER NOT NULL,
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS user_memories (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES demo_users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      source_conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+      source_message_id TEXT REFERENCES conversation_messages(id) ON DELETE SET NULL,
+      embedding TEXT,
+      embedding_model TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
     CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON conversation_messages(conversation_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_files_user_created ON uploaded_files(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_feedback_message ON answer_feedback(message_id);
     CREATE INDEX IF NOT EXISTS idx_model_usage_model_created ON model_usage(model_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_model_usage_user_created ON model_usage(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_user_memories_user_updated ON user_memories(user_id, updated_at DESC);
   `);
   sqliteReady = true;
 }
@@ -723,6 +780,114 @@ export const activityStorage = {
     }, () => {
       ensureSqliteReady();
       return sqlite.prepare("DELETE FROM conversations WHERE id = ? AND user_id = ?").run(id, userId).changes === 1;
+    });
+  },
+
+  async listUserMemories(userId: string, limit = 100): Promise<UserMemory[]> {
+    const normalizedLimit = Math.max(1, Math.min(200, Math.floor(limit)));
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const result = await getPostgresPool().query<DatabaseRow>(
+        "SELECT *, embedding::text AS embedding FROM user_memories WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2",
+        [userId, normalizedLimit],
+      );
+      return result.rows.map(mapUserMemory);
+    }, () => {
+      ensureSqliteReady();
+      return (sqlite.prepare("SELECT * FROM user_memories WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?").all(userId, normalizedLimit) as DatabaseRow[])
+        .map(mapUserMemory);
+    });
+  },
+
+  async saveUserMemory(memory: NewUserMemory): Promise<UserMemory> {
+    const now = new Date();
+    const id = memory.id ?? crypto.randomUUID();
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const result = await getPostgresPool().query<DatabaseRow>(
+        `INSERT INTO user_memories
+          (id, user_id, content, kind, source_conversation_id, source_message_id, embedding, embedding_model, created_at, updated_at, last_used_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::vector, $8, $9, $9, NULL)
+         ON CONFLICT (id) DO UPDATE SET
+           content = EXCLUDED.content,
+           kind = EXCLUDED.kind,
+           source_conversation_id = EXCLUDED.source_conversation_id,
+           source_message_id = EXCLUDED.source_message_id,
+           embedding = EXCLUDED.embedding,
+           embedding_model = EXCLUDED.embedding_model,
+           updated_at = EXCLUDED.updated_at
+         RETURNING *, embedding::text AS embedding`,
+        [
+          id,
+          memory.userId,
+          memory.content,
+          memory.kind,
+          memory.sourceConversationId,
+          memory.sourceMessageId,
+          memory.embedding ? JSON.stringify(memory.embedding) : null,
+          memory.embeddingModel,
+          now,
+        ],
+      );
+      return mapUserMemory(result.rows[0]!);
+    }, () => {
+      ensureSqliteReady();
+      sqlite.prepare(`
+        INSERT INTO user_memories
+          (id, user_id, content, kind, source_conversation_id, source_message_id, embedding, embedding_model, created_at, updated_at, last_used_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+        ON CONFLICT(id) DO UPDATE SET
+          content = excluded.content,
+          kind = excluded.kind,
+          source_conversation_id = excluded.source_conversation_id,
+          source_message_id = excluded.source_message_id,
+          embedding = excluded.embedding,
+          embedding_model = excluded.embedding_model,
+          updated_at = excluded.updated_at
+      `).run(
+        id,
+        memory.userId,
+        memory.content,
+        memory.kind,
+        memory.sourceConversationId,
+        memory.sourceMessageId,
+        memory.embedding ? JSON.stringify(memory.embedding) : null,
+        memory.embeddingModel,
+        now.getTime(),
+        now.getTime(),
+      );
+      return mapUserMemory(sqlite.prepare("SELECT * FROM user_memories WHERE id = ?").get(id) as DatabaseRow);
+    });
+  },
+
+  async markUserMemoriesUsed(ids: string[], userId: string) {
+    const uniqueIds = [...new Set(ids)].filter(Boolean).slice(0, 20);
+    if (uniqueIds.length === 0) return;
+    const now = new Date();
+    return withStore(async () => {
+      await ensurePostgresReady();
+      await getPostgresPool().query(
+        "UPDATE user_memories SET last_used_at = $1 WHERE user_id = $2 AND id = ANY($3)",
+        [now, userId, uniqueIds],
+      );
+    }, () => {
+      ensureSqliteReady();
+      const update = sqlite.prepare("UPDATE user_memories SET last_used_at = ? WHERE user_id = ? AND id = ?");
+      sqlite.transaction(() => uniqueIds.forEach((id) => update.run(now.getTime(), userId, id)))();
+    });
+  },
+
+  async deleteUserMemory(id: string, userId: string) {
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const result = await getPostgresPool().query(
+        "DELETE FROM user_memories WHERE id = $1 AND user_id = $2",
+        [id, userId],
+      );
+      return result.rowCount === 1;
+    }, () => {
+      ensureSqliteReady();
+      return sqlite.prepare("DELETE FROM user_memories WHERE id = ? AND user_id = ?").run(id, userId).changes === 1;
     });
   },
 

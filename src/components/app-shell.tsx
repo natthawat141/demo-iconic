@@ -2,6 +2,7 @@
 
 import {
   ChevronDown,
+  BrainCircuit,
   Database,
   FileBarChart,
   FolderOpen,
@@ -47,6 +48,7 @@ import { cn } from "@/lib/utils";
 
 const memberNavigation = [
   { href: "/", label: "ผู้ช่วยความรู้", icon: MessageSquareText },
+  { href: "/memory", label: "ความจำของฉัน", icon: BrainCircuit },
   { href: "/library", label: "คลังไฟล์", icon: FolderOpen },
 ];
 
@@ -271,6 +273,7 @@ function getPageTitle(pathname: string) {
   if (pathname.startsWith("/knowledge")) return "คลังความรู้";
   if (pathname.startsWith("/gaps")) return "คำถามที่รอคำตอบ";
   if (pathname.startsWith("/library")) return "คลังไฟล์ของฉัน";
+  if (pathname.startsWith("/memory")) return "ความจำของฉัน";
   return "ผู้ช่วยความรู้";
 }
 

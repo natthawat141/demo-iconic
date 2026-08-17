@@ -56,6 +56,26 @@ export type UploadedFile = {
   createdAt: Date;
 };
 
+export type UserMemoryKind = "preference" | "project" | "fact" | "instruction";
+
+export type UserMemory = {
+  id: string;
+  userId: string;
+  content: string;
+  kind: UserMemoryKind;
+  sourceConversationId: string | null;
+  sourceMessageId: string | null;
+  embedding: number[] | null;
+  embeddingModel: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  lastUsedAt: Date | null;
+};
+
+export type NewUserMemory = Omit<UserMemory, "id" | "createdAt" | "updatedAt" | "lastUsedAt"> & {
+  id?: string;
+};
+
 export type ModelUsageOverview = {
   totalRequests: number;
   inputTokens: number;
