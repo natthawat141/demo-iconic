@@ -52,3 +52,5 @@ export type KnowledgeItem = typeof knowledgeItems.$inferSelect;
 export type NewKnowledgeItem = typeof knowledgeItems.$inferInsert;
 export type KnowledgeGap = typeof knowledgeGaps.$inferSelect;
 export type NewKnowledgeGap = typeof knowledgeGaps.$inferInsert;
+export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
+export type NewKnowledgeChunk = typeof knowledgeChunks.$inferInsert;

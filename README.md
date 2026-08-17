@@ -4,7 +4,8 @@
 
 ## สิ่งที่เดโมทำได้
 
-- แชตภาษาไทยบน `assistant-ui` พร้อมสถานะ grounded/safe demo และ Source Cards
+- แชตภาษาไทยบน `assistant-ui` พร้อม model-driven Knowledge tools, Markdown, charts และ Source Cards
+- โหมดมืด/สว่าง พร้อม workspace แยก Team member และ Admin
 - ใช้เฉพาะ Knowledge สถานะ `Approved` ในการตอบ
 - สร้าง แก้ไข อนุมัติ เก็บถาวร และกำหนด owner/source/review date
 - รวมคำถามที่ตอบไม่ได้เป็น Knowledge Gaps พร้อมจำนวนครั้งที่ถูกถาม
@@ -38,6 +39,24 @@ DEMO_SAFE_MODE=false
 
 หากไม่มี key หรือ `DEMO_SAFE_MODE=true` ระบบยังทำงานได้ด้วยคำตอบจาก Knowledge ที่ค้นพบและ local hash embeddings แบบ deterministic เหมาะสำหรับการพรีเซนต์โดยไม่พึ่งอินเทอร์เน็ต
 
+## Database
+
+Production ใช้ GCP Cloud SQL for PostgreSQL + pgvector ผ่าน `POSTGRES_URL` ส่วน local demo ยัง fallback เป็น SQLite ที่ `data/demo.sqlite` ได้ทันที:
+
+```dotenv
+POSTGRES_URL=postgresql://iconic_app:password@127.0.0.1:5433/iconic_knowledge
+```
+
+Oracle MySQL ยังรองรับเป็น compatibility option:
+
+```dotenv
+MYSQL_URL=mysql://user:password@host:3306/iconic_knowledge?ssl=true
+```
+
+ระบบจะสร้างตารางและ seed ข้อมูลเริ่มต้นให้อัตโนมัติเมื่อเชื่อมต่อครั้งแรก PostgreSQL เก็บ embeddings ด้วยชนิด `vector`; MySQL/SQLite เก็บเป็น JSON และยังคำนวณ similarity ในแอป
+
+รายละเอียด resource, Secret Manager, วิธีเปิด Cloud SQL Auth Proxy และ production checklist อยู่ที่ [docs/GCP_CLOUD_SQL.md](./docs/GCP_CLOUD_SQL.md)
+
 ## ตรวจคุณภาพ
 
 ```bash
@@ -47,6 +66,6 @@ pnpm test
 pnpm build
 ```
 
-SQLite ถูกเก็บที่ `data/demo.sqlite` และไม่ถูก commit ขึ้น Git ใช้ `pnpm db:seed` หรือปุ่ม “รีเซ็ตเดโม” เพื่อคืนข้อมูลเริ่มต้น
+SQLite ถูกเก็บที่ `data/demo.sqlite` และไม่ถูก commitขึ้น Git ใช้ `pnpm db:seed` หรือปุ่ม “รีเซ็ตเดโม” เพื่อคืนข้อมูลเริ่มต้น
 
 อ่านขอบเขตและ acceptance criteria ที่ [DEMO_SPEC.md](./DEMO_SPEC.md)

@@ -5,8 +5,8 @@ import { serializeGap } from "@/lib/serializers";
 
 export const dynamic = "force-dynamic";
 
-export default function GapsPage() {
-  const gaps = listGaps().map(serializeGap);
+export default async function GapsPage() {
+  const gaps = (await listGaps()).map(serializeGap);
   return (
     <div className="mx-auto max-w-[1080px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <PageHeader

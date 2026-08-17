@@ -9,8 +9,8 @@ import { serializeKnowledge } from "@/lib/serializers";
 
 export const dynamic = "force-dynamic";
 
-export default function KnowledgePage() {
-  const items = listKnowledge().map(serializeKnowledge);
+export default async function KnowledgePage() {
+  const items = (await listKnowledge()).map(serializeKnowledge);
   return (
     <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <PageHeader

@@ -1,15 +1,8 @@
-import { desc } from "drizzle-orm";
-
-import { db } from "@/db/client";
-import { knowledgeItems } from "@/db/schema";
+import { storage } from "@/db/storage";
 import { knowledgeInputSchema } from "@/lib/validation";
 
 export async function GET() {
-  const items = db
-    .select()
-    .from(knowledgeItems)
-    .orderBy(desc(knowledgeItems.updatedAt))
-    .all();
+  const items = await storage.listKnowledge();
   return Response.json({ items });
 }
 
@@ -24,20 +17,16 @@ export async function POST(request: Request) {
 
   const now = new Date();
   const id = crypto.randomUUID();
-  db.insert(knowledgeItems)
-    .values({
-      id,
-      ...parsed.data,
-      reviewDate: parsed.data.reviewDate
-        ? new Date(parsed.data.reviewDate)
-        : null,
-      status: "draft",
-      approvedBy: null,
-      approvedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .run();
+  await storage.createKnowledge({
+    id,
+    ...parsed.data,
+    reviewDate: parsed.data.reviewDate ? new Date(parsed.data.reviewDate) : null,
+    status: "draft",
+    approvedBy: null,
+    approvedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return Response.json({ id }, { status: 201 });
 }

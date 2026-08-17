@@ -24,6 +24,10 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  KnowledgeOverviewTool,
+  KnowledgeSearchTool,
+} from "@/components/knowledge-tool-ui";
 
 const ANIMATION_DURATION = 200;
 
@@ -526,7 +530,7 @@ function ToolFallbackApproval({
   );
 }
 
-const ToolFallbackImpl: ToolCallMessagePartComponent = ({
+const GenericToolFallback: ToolCallMessagePartComponent = ({
   toolName,
   argsText,
   result,
@@ -571,6 +575,16 @@ const ToolFallbackImpl: ToolCallMessagePartComponent = ({
       </ToolFallbackContent>
     </ToolFallbackRoot>
   );
+};
+
+const ToolFallbackImpl: ToolCallMessagePartComponent = (props) => {
+  if (props.toolName === "searchKnowledge") {
+    return <KnowledgeSearchTool status={props.status} result={props.result} />;
+  }
+  if (props.toolName === "showKnowledgeOverview") {
+    return <KnowledgeOverviewTool status={props.status} result={props.result} />;
+  }
+  return <GenericToolFallback {...props} />;
 };
 
 const ToolFallback = memo(

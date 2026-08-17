@@ -1,9 +1,7 @@
-import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
 import { KnowledgeForm } from "@/components/knowledge-form";
-import { db } from "@/db/client";
-import { knowledgeItems } from "@/db/schema";
+import { storage } from "@/db/storage";
 import { serializeKnowledge } from "@/lib/serializers";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +12,7 @@ export default async function KnowledgeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const item = db.select().from(knowledgeItems).where(eq(knowledgeItems.id, id)).get();
+  const item = await storage.getKnowledge(id);
   if (!item) notFound();
   return <KnowledgeForm item={serializeKnowledge(item)} />;
 }

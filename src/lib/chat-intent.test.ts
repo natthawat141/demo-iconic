@@ -13,4 +13,8 @@ describe("chat intent routing", () => {
   it("keeps a knowledge question in the retrieval path", () => {
     expect(conversationalReply("ลูกค้าไม่ตอบ ควรติดตามอย่างไร")).toBeNull();
   });
+
+  it("answers identity questions without retrieval", () => {
+    expect(conversationalReply("คุณคือใคร")).toContain("น้องฟ้า");
+  });
 });

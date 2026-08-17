@@ -1,9 +1,8 @@
-import { resetDemoData } from "@/db/client";
+import { storage } from "@/db/storage";
 import { rebuildKnowledgeIndex } from "@/lib/knowledge";
 
 export async function POST() {
-  resetDemoData();
+  await storage.resetDemoData();
   await rebuildKnowledgeIndex(true);
   return Response.json({ ok: true });
 }
-

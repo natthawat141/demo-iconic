@@ -1,8 +1,6 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { db } from "@/db/client";
-import { knowledgeGaps, knowledgeItems } from "@/db/schema";
+import { storage } from "@/db/storage";
 import { rebuildKnowledgeIndex } from "@/lib/knowledge";
 import { knowledgeInputSchema } from "@/lib/validation";
 
@@ -20,11 +18,7 @@ export async function POST(
     return Response.json({ error: "สถานะไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const item = db
-    .select()
-    .from(knowledgeItems)
-    .where(eq(knowledgeItems.id, id))
-    .get();
+  const item = await storage.getKnowledge(id);
   if (!item) return Response.json({ error: "ไม่พบ Knowledge" }, { status: 404 });
 
   const { status } = statusResult.data;
@@ -45,21 +39,15 @@ export async function POST(
   }
 
   const now = new Date();
-  db.update(knowledgeItems)
-    .set({
-      status,
-      updatedAt: now,
-      approvedBy: status === "approved" ? "Demo Knowledge Manager" : item.approvedBy,
-      approvedAt: status === "approved" ? now : item.approvedAt,
-    })
-    .where(eq(knowledgeItems.id, id))
-    .run();
+  await storage.updateKnowledge(id, {
+    status,
+    updatedAt: now,
+    approvedBy: status === "approved" ? "Demo Knowledge Manager" : item.approvedBy,
+    approvedAt: status === "approved" ? now : item.approvedAt,
+  });
 
   if (status === "approved") {
-    db.update(knowledgeGaps)
-      .set({ status: "resolved" })
-      .where(eq(knowledgeGaps.resolvedKnowledgeItemId, id))
-      .run();
+    await storage.resolveGapsForKnowledge(id);
   }
   await rebuildKnowledgeIndex(true);
   return Response.json({ ok: true, status });

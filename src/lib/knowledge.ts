@@ -1,16 +1,10 @@
 import "server-only";
 
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { and, desc, eq } from "drizzle-orm";
 import { embed, embedMany } from "ai";
 
-import { db } from "@/db/client";
-import {
-  knowledgeChunks,
-  knowledgeGaps,
-  knowledgeItems,
-  type KnowledgeItem,
-} from "@/db/schema";
+import type { KnowledgeItem } from "@/db/schema";
+import { storage } from "@/db/storage";
 
 const LOCAL_MODEL = "local-hash-v1";
 const VECTOR_SIZE = 256;
@@ -19,6 +13,11 @@ export type RetrievedKnowledge = {
   item: KnowledgeItem;
   excerpt: string;
   score: number;
+};
+
+export type KnowledgeSearchResult = {
+  matches: RetrievedKnowledge[];
+  related: RetrievedKnowledge[];
 };
 
 function normalizeText(value: string) {
@@ -164,12 +163,8 @@ async function createEmbeddings(values: string[], modelKey: string) {
 }
 
 export async function rebuildKnowledgeIndex(force = false) {
-  const approvedItems = db
-    .select()
-    .from(knowledgeItems)
-    .where(eq(knowledgeItems.status, "approved"))
-    .all();
-  const existing = db.select().from(knowledgeChunks).all();
+  const approvedItems = await storage.listApprovedKnowledge();
+  const existing = await storage.listChunks();
   const desiredModel = requestedModelKey();
 
   if (
@@ -192,24 +187,17 @@ export async function rebuildKnowledgeIndex(force = false) {
     desiredModel,
   );
 
-  db.transaction((tx) => {
-    tx.delete(knowledgeChunks).run();
-    if (pending.length > 0) {
-      tx.insert(knowledgeChunks)
-        .values(
-          pending.map((entry, index) => ({
-            id: `${entry.item.id}-${entry.chunkIndex}`,
-            knowledgeItemId: entry.item.id,
-            content: entry.content,
-            chunkIndex: entry.chunkIndex,
-            embedding: vectors[index],
-            embeddingModel: modelKey,
-            createdAt: new Date(),
-          })),
-        )
-        .run();
-    }
-  });
+  await storage.replaceChunks(
+    pending.map((entry, index) => ({
+      id: `${entry.item.id}-${entry.chunkIndex}`,
+      knowledgeItemId: entry.item.id,
+      content: entry.content,
+      chunkIndex: entry.chunkIndex,
+      embedding: vectors[index],
+      embeddingModel: modelKey,
+      createdAt: new Date(),
+    })),
+  );
 
   return modelKey;
 }
@@ -243,22 +231,18 @@ function keywordBonus(question: string, item: KnowledgeItem) {
   return Math.min(matches * 0.08, 0.24);
 }
 
-export async function retrieveKnowledge(question: string) {
+export async function searchKnowledge(question: string): Promise<KnowledgeSearchResult> {
   let modelKey = await rebuildKnowledgeIndex();
   let queryVector = await embedQuestion(question, modelKey);
-  let chunks = db.select().from(knowledgeChunks).all();
+  let chunks = await storage.listChunks();
 
   if (chunks.length > 0 && chunks[0].embedding.length !== queryVector.length) {
     modelKey = await rebuildKnowledgeIndex(true);
     queryVector = await embedQuestion(question, modelKey);
-    chunks = db.select().from(knowledgeChunks).all();
+    chunks = await storage.listChunks();
   }
 
-  const approvedItems = db
-    .select()
-    .from(knowledgeItems)
-    .where(eq(knowledgeItems.status, "approved"))
-    .all();
+  const approvedItems = await storage.listApprovedKnowledge();
   const itemMap = new Map(approvedItems.map((item) => [item.id, item]));
   const bestByItem = new Map<string, RetrievedKnowledge>();
 
@@ -279,61 +263,82 @@ export async function retrieveKnowledge(question: string) {
   // The local hash model is deliberately conservative: a false answer is
   // worse than creating a gap in this governance demo.
   const threshold = modelKey === LOCAL_MODEL ? 0.36 : 0.46;
-  return [...bestByItem.values()]
-    .filter((entry) => entry.score >= threshold)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 4);
+  const ranked = [...bestByItem.values()].sort((left, right) => right.score - left.score);
+  const matches = ranked.filter((entry) => entry.score >= threshold).slice(0, 4);
+  const matchedIds = new Set(matches.map((entry) => entry.item.id));
+  const relatedFloor = modelKey === LOCAL_MODEL ? 0.16 : 0.2;
+  const related = ranked
+    .filter((entry) => !matchedIds.has(entry.item.id) && entry.score >= relatedFloor)
+    .slice(0, 3);
+
+  return { matches, related };
+}
+
+export async function retrieveKnowledge(question: string) {
+  return (await searchKnowledge(question)).matches;
 }
 
 export function normalizeQuestion(question: string) {
   return normalizeText(question).replace(/[?？]/g, "");
 }
 
-export function recordKnowledgeGap(question: string) {
+export async function recordKnowledgeGap(question: string) {
   const normalizedQuestion = normalizeQuestion(question);
-  const existing = db
-    .select()
-    .from(knowledgeGaps)
-    .where(eq(knowledgeGaps.normalizedQuestion, normalizedQuestion))
-    .get();
+  const existing = await storage.findGapByNormalizedQuestion(normalizedQuestion);
   const now = new Date();
 
   if (existing) {
-    db.update(knowledgeGaps)
-      .set({ count: existing.count + 1, lastAskedAt: now })
-      .where(eq(knowledgeGaps.id, existing.id))
-      .run();
+    await storage.updateGap(existing.id, {
+      count: existing.count + 1,
+      lastAskedAt: now,
+    });
     return existing.id;
   }
 
   const id = crypto.randomUUID();
-  db.insert(knowledgeGaps)
-    .values({
-      id,
-      question,
-      normalizedQuestion,
-      count: 1,
-      status: "new",
-      firstAskedAt: now,
-      lastAskedAt: now,
-      resolvedKnowledgeItemId: null,
-    })
-    .run();
+  await storage.createGap({
+    id,
+    question,
+    normalizedQuestion,
+    count: 1,
+    status: "new",
+    firstAskedAt: now,
+    lastAskedAt: now,
+    resolvedKnowledgeItemId: null,
+  });
   return id;
 }
 
-export function listKnowledge() {
-  return db.select().from(knowledgeItems).orderBy(desc(knowledgeItems.updatedAt)).all();
+export async function listKnowledge() {
+  return storage.listKnowledge();
 }
 
-export function listGaps() {
-  return db.select().from(knowledgeGaps).orderBy(desc(knowledgeGaps.lastAskedAt)).all();
+export async function listGaps() {
+  return storage.listGaps();
 }
 
-export function markGapEscalated(id: string) {
-  return db
-    .update(knowledgeGaps)
-    .set({ status: "escalated" })
-    .where(and(eq(knowledgeGaps.id, id), eq(knowledgeGaps.status, "new")))
-    .run();
+export async function getKnowledgeOverview() {
+  const [knowledge, gaps] = await Promise.all([listKnowledge(), listGaps()]);
+  const categoryCounts = new Map<string, number>();
+  for (const item of knowledge.filter((entry) => entry.status === "approved")) {
+    categoryCounts.set(item.category, (categoryCounts.get(item.category) ?? 0) + 1);
+  }
+
+  return {
+    title: "Approved Knowledge by category",
+    total: knowledge.length,
+    approved: knowledge.filter((item) => item.status === "approved").length,
+    draft: knowledge.filter((item) => item.status === "draft").length,
+    activeGaps: gaps.filter((gap) => gap.status === "new" || gap.status === "escalated").length,
+    categories: [...categoryCounts.entries()]
+      .map(([label, value]) => ({ label, value }))
+      .sort((left, right) => right.value - left.value)
+      .slice(0, 8),
+  };
+}
+
+export async function markGapEscalated(id: string) {
+  const gap = await storage.getGap(id);
+  if (!gap || gap.status !== "new") return false;
+  return storage.updateGap(id, { status: "escalated" });
 }

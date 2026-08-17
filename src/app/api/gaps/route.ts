@@ -1,14 +1,6 @@
-import { desc } from "drizzle-orm";
-
-import { db } from "@/db/client";
-import { knowledgeGaps } from "@/db/schema";
+import { storage } from "@/db/storage";
 
 export async function GET() {
-  const gaps = db
-    .select()
-    .from(knowledgeGaps)
-    .orderBy(desc(knowledgeGaps.lastAskedAt))
-    .all();
+  const gaps = await storage.listGaps();
   return Response.json({ gaps });
 }
-

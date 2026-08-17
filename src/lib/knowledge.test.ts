@@ -42,9 +42,9 @@ describe("knowledge demo workflow", () => {
     expect(results).toEqual([]);
   });
 
-  it("normalizes and merges repeated knowledge gaps", () => {
-    const firstId = recordKnowledgeGap("โบนัสไตรมาสนี้จ่ายวันไหน?");
-    const repeatedId = recordKnowledgeGap("  โบนัสไตรมาสนี้จ่ายวันไหน  ");
+  it("normalizes and merges repeated knowledge gaps", async () => {
+    const firstId = await recordKnowledgeGap("โบนัสไตรมาสนี้จ่ายวันไหน?");
+    const repeatedId = await recordKnowledgeGap("  โบนัสไตรมาสนี้จ่ายวันไหน  ");
 
     expect(repeatedId).toBe(firstId);
     expect(normalizeQuestion("โบนัสไตรมาสนี้จ่ายวันไหน?")).toBe(

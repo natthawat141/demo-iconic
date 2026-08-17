@@ -3,6 +3,7 @@
 import {
   AuiConfig,
   AssistantRuntimeProvider,
+  SimpleImageAttachmentAdapter,
   Suggestions,
   useAssistantDataUI,
   type DataMessagePartProps,
@@ -18,6 +19,21 @@ import { useState } from "react";
 import { Thread } from "@/components/thread";
 import { Button } from "@/components/ui/button";
 import type { KnowledgeStateData } from "@/lib/demo-types";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+class DemoImageAttachmentAdapter extends SimpleImageAttachmentAdapter {
+  override accept = "image/jpeg,image/png,image/webp,image/gif";
+
+  override async add({ file }: { file: File }) {
+    if (file.size > MAX_IMAGE_BYTES) {
+      throw new Error("รูปต้องมีขนาดไม่เกิน 5 MB");
+    }
+    return super.add({ file });
+  }
+}
+
+const imageAttachmentAdapter = new DemoImageAttachmentAdapter();
 
 function KnowledgeState({ data }: DataMessagePartProps<KnowledgeStateData>) {
   const [sent, setSent] = useState(false);
@@ -37,13 +53,11 @@ function KnowledgeState({ data }: DataMessagePartProps<KnowledgeStateData>) {
   }
 
   return (
-    <div
-      className={`mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm ${
-        insufficient
-          ? "bg-[oklch(0.96_0.04_75)] text-[oklch(0.32_0.07_75)]"
-          : "bg-[oklch(0.95_0.035_150)] text-[oklch(0.30_0.08_150)]"
-      }`}
-    >
+    <div className={`mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm ring-1 ${
+      insufficient
+        ? "bg-[oklch(0.96_0.04_75)] text-[oklch(0.32_0.07_75)] ring-[oklch(0.84_0.08_75)] dark:bg-[oklch(0.28_0.05_75)] dark:text-[oklch(0.82_0.1_75)] dark:ring-[oklch(0.4_0.07_75)]"
+        : "bg-[oklch(0.95_0.035_150)] text-[oklch(0.30_0.08_150)] ring-[oklch(0.83_0.07_150)] dark:bg-[oklch(0.27_0.045_150)] dark:text-[oklch(0.82_0.09_150)] dark:ring-[oklch(0.39_0.07_150)]"
+    }`}>
       <span className="flex items-center gap-2 font-semibold">
         {insufficient ? (
           <ShieldAlert className="size-4" aria-hidden="true" />
@@ -87,6 +101,7 @@ function KnowledgeDataRenderer() {
 export const Assistant = () => {
   const runtime = useChatRuntime({
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    adapters: { attachments: imageAttachmentAdapter },
     transport: new AssistantChatTransport({
       api: "/api/chat",
     }),
@@ -108,13 +123,18 @@ export const Assistant = () => {
         label: "คำถามที่ยังไม่มีข้อมูล",
         prompt: "ลูกค้ารายนี้ควรเลือกกรมธรรม์ของบริษัท A หรือ B?",
       },
+      {
+        title: "ดูภาพรวมเป็นกราฟ",
+        label: "Knowledge by category",
+        prompt: "ช่วยสรุปภาพรวม Knowledge ของทีมเป็นกราฟให้ดูหน่อย",
+      },
     ]),
   });
 
   return (
     <AssistantRuntimeProvider runtime={runtime} config={config}>
       <KnowledgeDataRenderer />
-      <div className="h-[calc(100dvh-3.5rem)]">
+      <div className="h-[calc(100dvh-3.75rem)]">
         <Thread />
       </div>
     </AssistantRuntimeProvider>
