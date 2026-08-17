@@ -10,6 +10,7 @@ import type {
   ConversationDetail,
   ConversationMessage,
   DemoUser,
+  ModelUsageOverview,
   NewUploadedFile,
   UploadedFile,
 } from "./activity-types";
@@ -17,7 +18,10 @@ import type {
 type DatabaseRow = Record<string, unknown>;
 
 function date(value: unknown) {
-  return value instanceof Date ? value : new Date(String(value));
+  if (value instanceof Date) return value;
+  if (typeof value === "number") return new Date(value);
+  if (typeof value === "string" && /^\d+$/.test(value)) return new Date(Number(value));
+  return new Date(String(value));
 }
 
 function parseJson<T>(value: unknown, fallback: T): T {
@@ -160,10 +164,22 @@ async function ensurePostgresReady() {
         analysis JSONB NULL,
         created_at TIMESTAMPTZ NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS model_usage (
+        id VARCHAR(128) PRIMARY KEY,
+        user_id VARCHAR(128) NOT NULL REFERENCES demo_users(id) ON DELETE CASCADE,
+        conversation_id VARCHAR(128) NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        model_id VARCHAR(191) NOT NULL,
+        input_tokens BIGINT NOT NULL,
+        output_tokens BIGINT NOT NULL,
+        total_tokens BIGINT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL
+      );
       CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC);
       CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON conversation_messages(conversation_id, created_at);
       CREATE INDEX IF NOT EXISTS idx_files_user_created ON uploaded_files(user_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_feedback_message ON answer_feedback(message_id);
+      CREATE INDEX IF NOT EXISTS idx_model_usage_model_created ON model_usage(model_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_model_usage_user_created ON model_usage(user_id, created_at DESC);
     `);
   })();
   return postgresReady;
@@ -220,10 +236,22 @@ function ensureSqliteReady() {
       analysis TEXT,
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS model_usage (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES demo_users(id) ON DELETE CASCADE,
+      conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      model_id TEXT NOT NULL,
+      input_tokens INTEGER NOT NULL,
+      output_tokens INTEGER NOT NULL,
+      total_tokens INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON conversation_messages(conversation_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_files_user_created ON uploaded_files(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_feedback_message ON answer_feedback(message_id);
+    CREATE INDEX IF NOT EXISTS idx_model_usage_model_created ON model_usage(model_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_model_usage_user_created ON model_usage(user_id, created_at DESC);
   `);
   sqliteReady = true;
 }
@@ -361,6 +389,196 @@ export const activityStorage = {
         ON CONFLICT(message_id, source_id) DO UPDATE SET title = excluded.title, url = excluded.url
       `);
       sqlite.transaction(() => sources.forEach((source) => insert.run(source.messageId, source.sourceId, source.title, source.url)))();
+    });
+  },
+
+  async recordModelUsage(input: {
+    id: string;
+    userId: string;
+    conversationId: string;
+    modelId: string;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  }) {
+    const createdAt = new Date();
+    const inputTokens = Math.max(0, Math.floor(input.inputTokens));
+    const outputTokens = Math.max(0, Math.floor(input.outputTokens));
+    const totalTokens = Math.max(inputTokens + outputTokens, Math.floor(input.totalTokens));
+    return withStore(async () => {
+      await ensurePostgresReady();
+      await getPostgresPool().query(
+        `INSERT INTO model_usage (id, user_id, conversation_id, model_id, input_tokens, output_tokens, total_tokens, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (id) DO NOTHING`,
+        [input.id, input.userId, input.conversationId, input.modelId, inputTokens, outputTokens, totalTokens, createdAt],
+      );
+    }, () => {
+      ensureSqliteReady();
+      sqlite.prepare(`
+        INSERT INTO model_usage (id, user_id, conversation_id, model_id, input_tokens, output_tokens, total_tokens, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO NOTHING
+      `).run(input.id, input.userId, input.conversationId, input.modelId, inputTokens, outputTokens, totalTokens, createdAt.getTime());
+    });
+  },
+
+  async getModelUsageOverview(limit = 8): Promise<ModelUsageOverview> {
+    const normalizedLimit = Math.max(1, Math.min(50, Math.floor(limit)));
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const db = getPostgresPool();
+      const [totalsResult, modelsResult, usersResult] = await Promise.all([
+        db.query<DatabaseRow>(`
+          SELECT
+            COUNT(*) AS request_count,
+            COALESCE(SUM(input_tokens), 0) AS input_tokens,
+            COALESCE(SUM(output_tokens), 0) AS output_tokens,
+            COALESCE(SUM(total_tokens), 0) AS total_tokens
+          FROM model_usage
+        `),
+        db.query<DatabaseRow>(`
+          SELECT
+            model_id,
+            COUNT(*) AS request_count,
+            COALESCE(SUM(input_tokens), 0) AS input_tokens,
+            COALESCE(SUM(output_tokens), 0) AS output_tokens,
+            COALESCE(SUM(total_tokens), 0) AS total_tokens
+          FROM model_usage
+          GROUP BY model_id
+          ORDER BY total_tokens DESC, request_count DESC, model_id ASC
+          LIMIT $1
+        `, [normalizedLimit]),
+        db.query<DatabaseRow>(`
+          WITH user_questions AS (
+            SELECT
+              conversations.user_id,
+              COUNT(conversation_messages.id) AS question_count,
+              MAX(conversation_messages.created_at) AS last_asked_at
+            FROM conversation_messages
+            INNER JOIN conversations ON conversations.id = conversation_messages.conversation_id
+            WHERE conversation_messages.role = 'user'
+            GROUP BY conversations.user_id
+          ),
+          user_tokens AS (
+            SELECT
+              user_id,
+              COUNT(*) AS model_request_count,
+              COALESCE(SUM(total_tokens), 0) AS total_tokens
+            FROM model_usage
+            GROUP BY user_id
+          )
+          SELECT
+            demo_users.id,
+            demo_users.display_name,
+            user_questions.question_count,
+            COALESCE(user_tokens.model_request_count, 0) AS model_request_count,
+            COALESCE(user_tokens.total_tokens, 0) AS total_tokens,
+            user_questions.last_asked_at
+          FROM user_questions
+          INNER JOIN demo_users ON demo_users.id = user_questions.user_id
+          LEFT JOIN user_tokens ON user_tokens.user_id = user_questions.user_id
+          ORDER BY user_questions.question_count DESC, user_questions.last_asked_at DESC
+          LIMIT $1
+        `, [normalizedLimit]),
+      ]);
+      const totals = totalsResult.rows[0] ?? {};
+      return {
+        totalRequests: Number(totals.request_count ?? 0),
+        inputTokens: Number(totals.input_tokens ?? 0),
+        outputTokens: Number(totals.output_tokens ?? 0),
+        totalTokens: Number(totals.total_tokens ?? 0),
+        models: modelsResult.rows.map((row) => ({
+          modelId: String(row.model_id),
+          requestCount: Number(row.request_count ?? 0),
+          inputTokens: Number(row.input_tokens ?? 0),
+          outputTokens: Number(row.output_tokens ?? 0),
+          totalTokens: Number(row.total_tokens ?? 0),
+        })),
+        users: usersResult.rows.map((row) => ({
+          userId: String(row.id),
+          displayName: String(row.display_name),
+          questionCount: Number(row.question_count ?? 0),
+          modelRequestCount: Number(row.model_request_count ?? 0),
+          totalTokens: Number(row.total_tokens ?? 0),
+          lastAskedAt: date(row.last_asked_at),
+        })),
+      };
+    }, () => {
+      ensureSqliteReady();
+      const totals = sqlite.prepare(`
+        SELECT
+          COUNT(*) AS request_count,
+          COALESCE(SUM(input_tokens), 0) AS input_tokens,
+          COALESCE(SUM(output_tokens), 0) AS output_tokens,
+          COALESCE(SUM(total_tokens), 0) AS total_tokens
+        FROM model_usage
+      `).get() as DatabaseRow;
+      const models = sqlite.prepare(`
+        SELECT
+          model_id,
+          COUNT(*) AS request_count,
+          COALESCE(SUM(input_tokens), 0) AS input_tokens,
+          COALESCE(SUM(output_tokens), 0) AS output_tokens,
+          COALESCE(SUM(total_tokens), 0) AS total_tokens
+        FROM model_usage
+        GROUP BY model_id
+        ORDER BY total_tokens DESC, request_count DESC, model_id ASC
+        LIMIT ?
+      `).all(normalizedLimit) as DatabaseRow[];
+      const users = sqlite.prepare(`
+        WITH user_questions AS (
+          SELECT
+            conversations.user_id,
+            COUNT(conversation_messages.id) AS question_count,
+            MAX(conversation_messages.created_at) AS last_asked_at
+          FROM conversation_messages
+          INNER JOIN conversations ON conversations.id = conversation_messages.conversation_id
+          WHERE conversation_messages.role = 'user'
+          GROUP BY conversations.user_id
+        ),
+        user_tokens AS (
+          SELECT
+            user_id,
+            COUNT(*) AS model_request_count,
+            COALESCE(SUM(total_tokens), 0) AS total_tokens
+          FROM model_usage
+          GROUP BY user_id
+        )
+        SELECT
+          demo_users.id,
+          demo_users.display_name,
+          user_questions.question_count,
+          COALESCE(user_tokens.model_request_count, 0) AS model_request_count,
+          COALESCE(user_tokens.total_tokens, 0) AS total_tokens,
+          user_questions.last_asked_at
+        FROM user_questions
+        INNER JOIN demo_users ON demo_users.id = user_questions.user_id
+        LEFT JOIN user_tokens ON user_tokens.user_id = user_questions.user_id
+        ORDER BY user_questions.question_count DESC, user_questions.last_asked_at DESC
+        LIMIT ?
+      `).all(normalizedLimit) as DatabaseRow[];
+      return {
+        totalRequests: Number(totals.request_count ?? 0),
+        inputTokens: Number(totals.input_tokens ?? 0),
+        outputTokens: Number(totals.output_tokens ?? 0),
+        totalTokens: Number(totals.total_tokens ?? 0),
+        models: models.map((row) => ({
+          modelId: String(row.model_id),
+          requestCount: Number(row.request_count ?? 0),
+          inputTokens: Number(row.input_tokens ?? 0),
+          outputTokens: Number(row.output_tokens ?? 0),
+          totalTokens: Number(row.total_tokens ?? 0),
+        })),
+        users: users.map((row) => ({
+          userId: String(row.id),
+          displayName: String(row.display_name),
+          questionCount: Number(row.question_count ?? 0),
+          modelRequestCount: Number(row.model_request_count ?? 0),
+          totalTokens: Number(row.total_tokens ?? 0),
+          lastAskedAt: date(row.last_asked_at),
+        })),
+      };
     });
   },
 

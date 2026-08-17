@@ -4,6 +4,7 @@ import {
   analyzeUploadedPdf,
   analyzeUploadedSpreadsheet,
   classifyUpload,
+  deleteFromDemoBucket,
   pdfPrompt,
   spreadsheetPrompt,
   uploadToDemoBucket,
@@ -78,8 +79,18 @@ export async function POST(request: Request) {
   }
 
   const id = crypto.randomUUID();
+  let uploaded: Awaited<ReturnType<typeof uploadToDemoBucket>>;
   try {
-    const uploaded = await uploadToDemoBucket({ id, userId, file, mediaType: classified.mediaType });
+    uploaded = await uploadToDemoBucket({ id, userId, file, mediaType: classified.mediaType });
+  } catch (error) {
+    console.error("Cloud Storage upload failed", error);
+    return withDemoSessionCookie(
+      Response.json({ error: "อัปโหลดไฟล์ไปยัง Cloud Storage ไม่สำเร็จ กรุณาลองใหม่" }, { status: 502 }),
+      setCookie,
+    );
+  }
+
+  try {
     await activityStorage.createUploadedFile({
       id,
       userId,
@@ -93,9 +104,12 @@ export async function POST(request: Request) {
       analysis,
     });
   } catch (error) {
-    console.error("File upload failed", error);
+    console.error("Uploaded file metadata failed", error);
+    await deleteFromDemoBucket(uploaded.objectPath).catch((deleteError) => {
+      console.error("Orphaned Cloud Storage upload cleanup failed", deleteError);
+    });
     return withDemoSessionCookie(
-      Response.json({ error: "อัปโหลดไฟล์ไปยัง Cloud Storage ไม่สำเร็จ กรุณาลองใหม่" }, { status: 502 }),
+      Response.json({ error: "ไฟล์ขึ้น Cloud Storage แล้ว แต่ระบบบันทึกข้อมูลไฟล์ไม่สำเร็จ กรุณาลองใหม่" }, { status: 503 }),
       setCookie,
     );
   }

@@ -54,6 +54,8 @@ import {
   SquareIcon,
   ThumbsDownIcon,
   ThumbsUpIcon,
+  Volume2Icon,
+  VolumeXIcon,
 } from "lucide-react";
 import {
   createContext,
@@ -61,6 +63,7 @@ import {
   type ComponentType,
   type FC,
   type PropsWithChildren,
+  useEffect,
   useState,
 } from "react";
 
@@ -280,6 +283,7 @@ const AnswerFeedback: FC = () => {
 
 const AssistantActionBar: FC = () => (
   <ActionBarPrimitive.Root hideWhenRunning autohide="not-last" className="aui-assistant-action-bar-root text-muted-foreground flex items-center gap-1">
+    <MessageSpeechButton />
     <ActionBarPrimitive.Copy render={<TooltipIconButton tooltip="Copy" />}>
       <AuiIf condition={(state) => state.message.isCopied}><CheckIcon /></AuiIf>
       <AuiIf condition={(state) => !state.message.isCopied}><CopyIcon /></AuiIf>
@@ -293,6 +297,49 @@ const AssistantActionBar: FC = () => (
     </ActionBarMorePrimitive.Root>
   </ActionBarPrimitive.Root>
 );
+
+const MessageSpeechButton: FC = () => {
+  const text = useAuiState((state) => state.message.content
+    .map((part) => part.type === "text" ? part.text : "")
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim());
+  const [speaking, setSpeaking] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+
+  useEffect(() => {
+    setSpeechSupported("speechSynthesis" in window);
+    return () => window.speechSynthesis?.cancel();
+  }, []);
+
+  if (!text || !speechSupported) return null;
+
+  function toggleSpeech() {
+    window.speechSynthesis.cancel();
+    if (speaking) {
+      setSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = /[\u0E00-\u0E7F]/.test(text) ? "th-TH" : "en-US";
+    utterance.rate = 0.96;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    setSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  return (
+    <TooltipIconButton
+      tooltip={speaking ? "หยุดอ่านคำตอบ" : "อ่านคำตอบออกเสียง"}
+      type="button"
+      onClick={toggleSpeech}
+      aria-label={speaking ? "หยุดอ่านคำตอบ" : "อ่านคำตอบออกเสียง"}
+    >
+      {speaking ? <VolumeXIcon /> : <Volume2Icon />}
+    </TooltipIconButton>
+  );
+};
 
 const UserFilePart: FileMessagePartComponent = (part) => <div className="py-1"><File {...part} /></div>;
 const UserImagePart: ImageMessagePartComponent = (part) => <div className="py-1 [&_[data-slot=image-preview]]:min-h-0 [&_[data-slot=image-root]]:max-w-36 [&_img]:max-h-36 [&_img]:w-auto"><Image {...part} /></div>;

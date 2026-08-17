@@ -432,6 +432,22 @@ export async function POST(request: Request) {
         if (done) break;
         writer.write(value);
       }
+      try {
+        const usage = await result.usage;
+        await activityStorage.recordModelUsage({
+          id: crypto.randomUUID(),
+          userId: persistence.userId,
+          conversationId: persistence.conversationId,
+          modelId: chatModel,
+          inputTokens: usage.inputTokens ?? 0,
+          outputTokens: usage.outputTokens ?? 0,
+          totalTokens: usage.totalTokens ?? 0,
+        });
+      } catch (error) {
+        // A completed answer remains usable even if the optional Admin metric
+        // cannot be written during a transient database reconnect.
+        console.error("Model usage metric failed", error);
+      }
       writeSources(writer, usedSources);
     },
     onError: (error) => {

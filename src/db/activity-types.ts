@@ -56,6 +56,28 @@ export type UploadedFile = {
   createdAt: Date;
 };
 
+export type ModelUsageOverview = {
+  totalRequests: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  models: Array<{
+    modelId: string;
+    requestCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  }>;
+  users: Array<{
+    userId: string;
+    displayName: string;
+    questionCount: number;
+    modelRequestCount: number;
+    totalTokens: number;
+    lastAskedAt: Date;
+  }>;
+};
+
 export type ConversationDetail = {
   conversation: Conversation;
   messages: ConversationMessage[];

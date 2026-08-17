@@ -6,6 +6,7 @@ import {
   Database,
   FileBarChart,
   FolderOpen,
+  Gauge,
   LayoutDashboard,
   LibraryBig,
   ListTodo,
@@ -53,6 +54,7 @@ const adminNavigation = [
   { href: "/admin/users", label: "ผู้ใช้งาน", icon: UsersRound },
   { href: "/admin/conversations", label: "บทสนทนา", icon: MessagesSquare },
   { href: "/admin/files", label: "ไฟล์และข้อมูล", icon: FileBarChart },
+  { href: "/admin/usage", label: "การใช้โมเดล", icon: Gauge },
   { href: "/admin/ai", label: "Admin AI", icon: MessageSquareText },
   { href: "/knowledge", label: "คลังความรู้", icon: LibraryBig },
   { href: "/gaps", label: "คำถามที่รอคำตอบ", icon: ListTodo },
@@ -253,6 +255,7 @@ function getPageTitle(pathname: string) {
   if (pathname.startsWith("/admin/users")) return "ผู้ใช้งานเดโม";
   if (pathname.startsWith("/admin/conversations")) return "บทสนทนาของทีม";
   if (pathname.startsWith("/admin/files")) return "ไฟล์และการวิเคราะห์";
+  if (pathname.startsWith("/admin/usage")) return "การใช้งานโมเดล";
   if (pathname.startsWith("/admin/ai")) return "Admin AI Workspace";
   if (pathname.startsWith("/admin")) return "ภาพรวมระบบ";
   if (pathname.startsWith("/knowledge/new")) return "เพิ่มความรู้";
