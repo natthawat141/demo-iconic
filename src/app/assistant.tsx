@@ -5,6 +5,7 @@ import {
   AssistantRuntimeProvider,
   CompositeAttachmentAdapter,
   SimpleImageAttachmentAdapter,
+  WebSpeechDictationAdapter,
   useAssistantDataUI,
   type AttachmentAdapter,
   type CompleteAttachment,
@@ -18,7 +19,7 @@ import {
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { CheckCircle2, Send, ShieldAlert } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Thread } from "@/components/thread";
 import { TabularAnalysisCard } from "@/components/tabular-analysis-card";
@@ -180,7 +181,21 @@ type AssistantProps = {
 
 export const Assistant = ({ conversationId, initialMessages }: AssistantProps) => {
   const [newConversationId] = useState(() => crypto.randomUUID());
+  const [dictationAdapter, setDictationAdapter] = useState<WebSpeechDictationAdapter>();
   const activeConversationId = conversationId ?? newConversationId;
+
+  useEffect(() => {
+    if (!WebSpeechDictationAdapter.isSupported()) return;
+    const frame = window.requestAnimationFrame(() => {
+      setDictationAdapter(new WebSpeechDictationAdapter({
+        language: "th-TH",
+        continuous: false,
+        interimResults: true,
+      }));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   const transport = useMemo(() => new AssistantChatTransport({
     api: "/api/chat",
     body: { conversationId: activeConversationId },
@@ -195,7 +210,10 @@ export const Assistant = ({ conversationId, initialMessages }: AssistantProps) =
     },
   });
   const runtime = useAISDKRuntime(chat, {
-    adapters: { attachments: attachmentAdapter },
+    adapters: {
+      attachments: attachmentAdapter,
+      ...(dictationAdapter ? { dictation: dictationAdapter } : {}),
+    },
   });
   return (
     <AssistantRuntimeProvider runtime={runtime} config={AuiConfig({})}>

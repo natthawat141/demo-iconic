@@ -181,6 +181,9 @@ const ComposerAction: FC = () => (
       <AuiIf condition={(state) => state.composer.dictation == null}>
         <ComposerPrimitive.Dictate render={<TooltipIconButton tooltip="พูดเพื่อพิมพ์" side="bottom" type="button" variant="ghost" size="icon" className="aui-composer-dictate size-10 rounded-lg" aria-label="พูดเพื่อพิมพ์" />}><MicIcon className="size-4" /></ComposerPrimitive.Dictate>
       </AuiIf>
+      <AuiIf condition={(state) => state.composer.dictation != null}>
+        <ComposerPrimitive.StopDictation render={<TooltipIconButton tooltip="หยุดรับเสียง" side="bottom" type="button" variant="secondary" size="icon" className="aui-composer-stop-dictation size-10 rounded-lg" aria-label="หยุดรับเสียง" />}><SquareIcon className="size-3.5 fill-current" /></ComposerPrimitive.StopDictation>
+      </AuiIf>
     </AuiIf>
     <AuiIf condition={(state) => !state.thread.isRunning}>
       <ComposerPrimitive.Send render={<TooltipIconButton tooltip="ส่งคำถาม" side="bottom" type="button" variant="default" size="icon" className="aui-composer-send size-10 rounded-lg" aria-label="ส่งคำถาม" />}><ArrowUpIcon className="size-4" /></ComposerPrimitive.Send>
