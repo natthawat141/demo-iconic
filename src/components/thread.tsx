@@ -19,6 +19,7 @@ import {
 } from "@/components/reasoning";
 import { ToolFallback } from "@/components/tool-fallback";
 import { TooltipIconButton } from "@/components/tooltip-icon-button";
+import { AiLoader } from "@/components/ui/ai-loader";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -112,6 +113,12 @@ const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
           <div data-slot="aui_message-group" className="mb-24 flex flex-col gap-y-6 empty:hidden">
             <ThreadPrimitive.Messages>{() => <ThreadMessage />}</ThreadPrimitive.Messages>
           </div>
+          <AuiIf condition={(state) => state.thread.isRunning}>
+            <div className="mb-4 flex items-center gap-2 px-1 text-xs text-muted-foreground" role="status">
+              <AiLoader label="กำลังตอบคำถาม" />
+              <span>กำลังคิดและตรวจข้อมูล...</span>
+            </div>
+          </AuiIf>
           <ThreadPrimitive.ViewportFooter
             className={cn(
               "aui-thread-viewport-footer flex flex-col gap-4 overflow-visible pb-4 md:pb-6",
@@ -221,7 +228,7 @@ const AssistantMessage: FC = () => {
               case "group-chainOfThought": return <div data-slot="aui_chain-of-thought">{children}</div>;
               case "group-tool":
                 if (ToolGroup) return <ToolGroup group={part}>{children}</ToolGroup>;
-                return part.status.type === "running" ? <p className="my-2 flex items-center gap-2 text-xs text-muted-foreground"><RefreshCwIcon className="size-3.5 animate-spin" />กำลังค้นข้อมูล...</p> : null;
+                return part.status.type === "running" ? <p className="my-2 flex items-center gap-2 text-xs text-muted-foreground"><AiLoader label="กำลังค้นข้อมูล" />กำลังค้นข้อมูล...</p> : null;
               case "group-reasoning": {
                 if (ReasoningGroup) return <ReasoningGroup group={part}>{children}</ReasoningGroup>;
                 const running = part.status.type === "running";
