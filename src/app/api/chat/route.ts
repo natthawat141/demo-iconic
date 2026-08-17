@@ -72,6 +72,12 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
 ]);
 const MAX_IMAGE_DATA_URL_LENGTH = 7_100_000;
 
+function hasChartableNumbers(messages: UIMessage[]) {
+  return messages.some((message) => message.parts.some(
+    (part) => part.type === "text" && /\d/.test(part.text),
+  ));
+}
+
 function latestUserFiles(messages: UIMessage[]) {
   const latest = [...messages].reverse().find((message) => message.role === "user");
   return latest?.parts.filter((part) => part.type === "file") ?? [];
@@ -496,7 +502,9 @@ export async function POST(request: Request) {
         : intent === "overview"
           ? { type: "tool" as const, toolName: "showKnowledgeOverview" as const }
           : intent === "visualize"
-            ? "auto" as const
+            ? hasChartableNumbers(prepared.modelMessages)
+              ? { type: "tool" as const, toolName: "renderChart" as const }
+              : "none" as const
             : "none" as const;
       const result = streamText({
         model: openrouter(chatModel),
@@ -518,6 +526,7 @@ ${memoryContext(relevantMemories) || "- ไม่มีบริบทที่�
 - เมื่อผู้ใช้ถามขั้นตอน นโยบาย แนวทางขาย การดูแลลูกค้า หรือข้อเท็จจริงของ ICONIC ให้เรียก searchKnowledge ก่อนตอบเสมอ
 - เมื่อผู้ใช้ขอภาพรวม, dashboard, สถิติ Knowledge หรือกราฟ Knowledge ให้เรียก showKnowledgeOverview
 - เมื่อผู้ใช้ขอกราฟจากตัวเลขในบทสนทนาหรือไฟล์ที่แนบ และมีตัวเลขชัดเจน ให้เรียก renderChart ด้วยค่าจากข้อมูลนั้นเท่านั้น; ถ้ายังไม่มีตัวเลขพอสร้างกราฟ ให้บอกว่าต้องการข้อมูลส่วนใดเพิ่ม และห้ามเดาค่า
+- ห้ามส่ง JSON, code block หรือข้อความที่อ้างว่าเป็นกราฟแทนการเรียก renderChart เพราะผู้ใช้จะไม่ได้เห็นกราฟจริง
 - ถ้า searchKnowledge พบข้อมูล ให้สรุปจากผลลัพธ์เท่านั้น ห้ามเพิ่มข้อเท็จจริงเอง
 - ถ้าไม่พบข้อมูลตรงๆ ให้พูดอย่างเป็นมนุษย์ว่าได้ลองเปิดคลังแล้วแต่ยังไม่มีคำตอบตรงคำถาม หากมี related ให้บอกว่าเป็น “เรื่องใกล้เคียง” และใช้เพียงชื่อหรือคำอธิบายสั้นๆ ห้ามนำมาแกล้งตอบแทน
 - ชวนผู้ใช้เพิ่มรายละเอียดหรือส่งต่อหัวหน้าทีมเมื่อเหมาะสม ห้ามแนะนำฝ่าย บุคคล ช่องทาง หรือนโยบายที่ไม่มีในผลลัพธ์ของ tool และไม่ต้องพูดคำเทคนิคอย่าง retrieval, vector หรือ threshold

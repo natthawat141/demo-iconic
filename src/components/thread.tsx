@@ -228,7 +228,9 @@ const AssistantMessage: FC = () => {
               case "group-chainOfThought": return <div data-slot="aui_chain-of-thought">{children}</div>;
               case "group-tool":
                 if (ToolGroup) return <ToolGroup group={part}>{children}</ToolGroup>;
-                return part.status.type === "running" ? <p className="my-2 flex items-center gap-2 text-xs text-muted-foreground"><AiLoader label="กำลังค้นข้อมูล" />กำลังค้นข้อมูล...</p> : null;
+                return part.status.type === "running"
+                  ? <p className="my-2 flex items-center gap-2 text-xs text-muted-foreground"><AiLoader label="กำลังค้นข้อมูล" />กำลังค้นข้อมูล...</p>
+                  : <div data-slot="aui_tool-group">{children}</div>;
               case "group-reasoning": {
                 if (ReasoningGroup) return <ReasoningGroup group={part}>{children}</ReasoningGroup>;
                 const running = part.status.type === "running";
