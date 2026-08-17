@@ -18,6 +18,24 @@ export type KnowledgeStateData = {
   gapId?: string;
 };
 
+export type TabularAnalysisData = {
+  fileId: string;
+  filename: string;
+  analysis: {
+    selectedSheet: {
+      name: string;
+      rowCount: number;
+      columnCount: number;
+    };
+    chart: {
+      kind: "bar" | "line";
+      title: string;
+      points: Array<{ label: string; value: number }>;
+    } | null;
+    caveats: string[];
+  };
+};
+
 export type KnowledgeItemDto = {
   id: string;
   title: string;

@@ -12,7 +12,7 @@ import { seedKnowledge, seedKnowledgeGaps } from "./seed-data";
 const dataDirectory = path.join(process.cwd(), "data");
 mkdirSync(dataDirectory, { recursive: true });
 
-const sqlite = new Database(
+export const sqlite = new Database(
   process.env.DEMO_DB_PATH ?? path.join(dataDirectory, "demo.sqlite"),
 );
 sqlite.pragma("journal_mode = WAL");

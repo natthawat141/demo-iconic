@@ -8,17 +8,23 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { activityStorage } from "@/db/activity-storage";
 import { Button } from "@/components/ui/button";
 import { listGaps, listKnowledge } from "@/lib/knowledge";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [knowledge, gaps] = await Promise.all([listKnowledge(), listGaps()]);
+  const [knowledge, gaps, users, conversations, files] = await Promise.all([
+    listKnowledge(),
+    listGaps(),
+    activityStorage.listUsers(),
+    activityStorage.listConversations({ limit: 500 }),
+    activityStorage.listUploadedFiles(500),
+  ]);
   const approved = knowledge.filter((item) => item.status === "approved").length;
   const drafts = knowledge.filter((item) => item.status === "draft").length;
   const activeGaps = gaps.filter((gap) => gap.status === "new" || gap.status === "escalated").length;
-  const categories = new Set(knowledge.map((item) => item.category)).size;
 
   return (
     <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -37,12 +43,13 @@ export default async function AdminPage() {
         </Button>
       </div>
 
-      <section className="grid gap-px overflow-hidden rounded-xl bg-border ring-1 ring-border sm:grid-cols-2 xl:grid-cols-4" aria-label="สถิติระบบ">
+      <section className="grid gap-px overflow-hidden rounded-xl bg-border ring-1 ring-border sm:grid-cols-2 xl:grid-cols-5" aria-label="สถิติระบบ">
         {[
-          { label: "พร้อมใช้งาน", value: approved, detail: `${categories} หมวดหมู่`, icon: BookOpenCheck },
+          { label: "พร้อมใช้งาน", value: approved, detail: "Approved knowledge", icon: BookOpenCheck },
           { label: "รอตรวจทาน", value: drafts, detail: "Draft knowledge", icon: FileClock },
           { label: "คำถามที่รอคำตอบ", value: activeGaps, detail: "ต้องจัดการต่อ", icon: CircleAlert },
-          { label: "รายการทั้งหมด", value: knowledge.length, detail: "Knowledge records", icon: MessagesSquare },
+          { label: "ผู้ใช้เดโม", value: users.length, detail: `${conversations.length} บทสนทนา`, icon: MessagesSquare },
+          { label: "ไฟล์อัปโหลด", value: files.length, detail: "Cloud Storage metadata", icon: Database },
         ].map((metric) => {
           const Icon = metric.icon;
           return (

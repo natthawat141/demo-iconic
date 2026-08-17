@@ -4,12 +4,14 @@ import {
   Bot,
   ChevronDown,
   Database,
+  FileBarChart,
   LayoutDashboard,
   LibraryBig,
   ListTodo,
   LogOut,
   Menu,
   MessageSquareText,
+  MessagesSquare,
   Moon,
   PanelLeftClose,
   RotateCcw,
@@ -17,6 +19,7 @@ import {
   ShieldCheck,
   Sun,
   UserRound,
+  UsersRound,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -41,6 +44,10 @@ const memberNavigation = [
 
 const adminNavigation = [
   { href: "/admin", label: "ภาพรวมระบบ", icon: LayoutDashboard },
+  { href: "/admin/users", label: "ผู้ใช้งาน", icon: UsersRound },
+  { href: "/admin/conversations", label: "บทสนทนา", icon: MessagesSquare },
+  { href: "/admin/files", label: "ไฟล์และข้อมูล", icon: FileBarChart },
+  { href: "/admin/ai", label: "Admin AI", icon: MessageSquareText },
   { href: "/knowledge", label: "คลังความรู้", icon: LibraryBig },
   { href: "/gaps", label: "คำถามที่รอคำตอบ", icon: ListTodo },
 ];
@@ -57,6 +64,10 @@ function isCurrent(pathname: string, href: string) {
 
 function getPageTitle(pathname: string) {
   if (pathname.startsWith("/admin/settings")) return "การตั้งค่าระบบ";
+  if (pathname.startsWith("/admin/users")) return "ผู้ใช้งานเดโม";
+  if (pathname.startsWith("/admin/conversations")) return "บทสนทนาของทีม";
+  if (pathname.startsWith("/admin/files")) return "ไฟล์และการวิเคราะห์";
+  if (pathname.startsWith("/admin/ai")) return "Admin AI Workspace";
   if (pathname.startsWith("/admin")) return "ภาพรวมระบบ";
   if (pathname.startsWith("/knowledge/new")) return "เพิ่มความรู้";
   if (pathname.startsWith("/knowledge/")) return "รายละเอียดความรู้";

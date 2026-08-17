@@ -18,6 +18,7 @@
 | Database | `iconic_knowledge` |
 | App user | `iconic_app` |
 | Vector extension | `vector` (`pgvector`) |
+| Demo upload bucket | `gs://aione-zone1-iconic-demo-50194055876` (`asia-southeast1`) |
 
 รหัสผ่านไม่อยู่ใน Git และเก็บไว้ใน Secret Manager:
 
@@ -53,9 +54,11 @@ pnpm dev
 
 อย่าเขียนค่ารหัสผ่านจริงลง `.env.example`, เอกสาร, commit หรือข้อความแชต
 
-## เชื่อมต่อจาก VM `ai-bot-chatwoot-vm`
+## หมายเหตุเรื่อง VM `ai-bot-chatwoot-vm`
 
-VM และฐานข้อมูลอยู่ zone เดียวกัน แต่ให้เชื่อมผ่าน Cloud SQL Auth Proxy เพื่อใช้ IAM และ TLS แทนการเปิด authorized network กว้างๆ
+VM นี้มีอยู่ก่อนงาน ICONIC และ **ไม่ได้ถูกสร้าง แก้ไข หรือใช้เป็นส่วนหนึ่งของเดโมนี้**. หัวข้อนี้คงไว้เป็นแนวทางเท่านั้น หากในอนาคตต้องนำแอปไป run บน VM ที่มีอยู่แล้ว
+
+หากเลือกใช้ VM ในอนาคต ให้เชื่อมผ่าน Cloud SQL Auth Proxy เพื่อใช้ IAM และ TLS แทนการเปิด authorized network กว้างๆ
 
 Service account ของ VM ต้องมีอย่างน้อย:
 
@@ -71,6 +74,8 @@ Service account ของ VM ต้องมีอย่างน้อย:
 3. ไม่มีทั้งสองค่า — SQLite local demo
 
 เมื่อ PostgreSQL เชื่อมต่อครั้งแรก แอปจะสร้างตารางและ seed demo data ให้อัตโนมัติ Embedding เก็บในคอลัมน์ชนิด `vector` ของ pgvector
+
+ไฟล์รูป, Excel, CSV, PDF และ DOCX ของเดโมเก็บ binary ใน Cloud Storage bucket ข้างต้น; PostgreSQL เก็บเฉพาะ metadata, user/conversation ID และผลวิเคราะห์ตารางที่ serialize ได้
 
 ## ตรวจสอบระบบ
 

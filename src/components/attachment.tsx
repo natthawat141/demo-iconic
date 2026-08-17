@@ -279,12 +279,12 @@ export const ComposerAddAttachment: FC = () => {
     <ComposerPrimitive.AddAttachment
       render={
         <TooltipIconButton
-          tooltip="แนบรูปภาพ"
+          tooltip="แนบรูปหรือไฟล์"
           side="bottom"
           variant="ghost"
           size="icon"
           className="aui-composer-add-attachment hover:bg-muted-foreground/15 dark:border-muted-foreground/15 dark:hover:bg-muted-foreground/30 size-7 rounded-full p-1 text-xs font-semibold active:scale-[0.96] motion-reduce:transition-none"
-          aria-label="แนบรูปภาพ (JPG, PNG, WEBP)"
+          aria-label="แนบรูปภาพหรือไฟล์ข้อมูล (JPG, PNG, WebP, GIF, CSV, Excel, PDF, DOCX)"
         />
       }
     >

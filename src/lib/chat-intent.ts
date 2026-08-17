@@ -11,6 +11,12 @@ const greetingPattern = /^(hi|hello|hey|yo|สวัสดี|หวัดดี
 const thanksPattern = /^(ขอบคุณ|ขอบคุณครับ|ขอบคุณค่ะ|thanks|thank you|โอเค|ok|okay)$/iu;
 const helpPattern = /^(ช่วยอะไรได้บ้าง|ทำอะไรได้บ้าง|คุณทำอะไรได้บ้าง|ใช้ยังไง|how can you help|what can you do)$/iu;
 const identityPattern = /^(คุณคือใคร|เธอคือใคร|น้องฟ้าคือใคร|who are you|what are you)$/iu;
+const overviewPattern = /(ภาพรวม|สรุป.*knowledge|knowledge.*สรุป|dashboard|chart|กราฟ|สถิติ.*knowledge)/iu;
+const internalContextPattern = /(iconic|น้องฟ้า|knowledge|ทีม(?:เรา)?|ของเรา|ของระบบเรา|ระบบ(?:ของ)?(?:เรา|ทีม)|ลูกค้า|กรมธรรม์|แนวทางขาย|ติดตามลูกค้า|หัวหน้าทีม)/iu;
+const generalDefinitionPattern = /^(api|apis|ฐานข้อมูล|database|rag|vector database|markdown|excel|csv)\s*(คืออะไร|คืออะไรครับ|คืออะไรคะ|หมายความว่าอะไร|what is)/iu;
+const ambiguousWorkPattern = /^(api|ขั้นตอน|นโยบาย|ข้อมูล|ระบบ|knowledge)\s*(ล่ะ|คืออะไร|หมายถึงอะไร|ยังไง)?$/iu;
+
+export type ChatIntent = "smalltalk" | "general" | "knowledge" | "overview" | "ambiguous";
 
 export function conversationalReply(message: string) {
   const normalized = normalizeMessage(message);
@@ -32,4 +38,24 @@ export function conversationalReply(message: string) {
   }
 
   return null;
+}
+
+export function classifyChatIntent(message: string, previousContext = ""): ChatIntent {
+  const normalized = normalizeMessage(message);
+  if (conversationalReply(message)) return "smalltalk";
+  if (overviewPattern.test(normalized)) return "overview";
+  if (generalDefinitionPattern.test(normalized)) return "general";
+  if (internalContextPattern.test(normalized)) return "knowledge";
+  if (ambiguousWorkPattern.test(normalized)) {
+    return internalContextPattern.test(previousContext) ? "knowledge" : "ambiguous";
+  }
+  return "general";
+}
+
+export function ambiguousContextReply(message: string) {
+  const normalized = normalizeMessage(message);
+  if (/api|ระบบ/iu.test(normalized)) {
+    return "หมายถึง API หรือระบบในความหมายทั่วไป หรือของระบบ ICONIC คะ? ถ้าเป็นของทีม น้องฟ้าจะเปิด Knowledge ที่เกี่ยวข้องให้ค่ะ";
+  }
+  return "เรื่องนี้หมายถึงข้อมูลทั่วไป หรือบริบทการทำงานของทีม ICONIC คะ? บอกเพิ่มอีกนิด น้องฟ้าจะช่วยต่อให้ตรงค่ะ";
 }

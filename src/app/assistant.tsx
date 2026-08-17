@@ -3,9 +3,12 @@
 import {
   AuiConfig,
   AssistantRuntimeProvider,
+  CompositeAttachmentAdapter,
   SimpleImageAttachmentAdapter,
-  Suggestions,
   useAssistantDataUI,
+  type AttachmentAdapter,
+  type CompleteAttachment,
+  type PendingAttachment,
   type DataMessagePartProps,
 } from "@assistant-ui/react";
 import {
@@ -13,14 +16,36 @@ import {
   useChatRuntime,
 } from "@assistant-ui/react-ai-sdk";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { CheckCircle2, Send, ShieldAlert } from "lucide-react";
+import { BarChart3, CheckCircle2, Send, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
 import { Thread } from "@/components/thread";
 import { Button } from "@/components/ui/button";
-import type { KnowledgeStateData } from "@/lib/demo-types";
+import type { KnowledgeStateData, TabularAnalysisData } from "@/lib/demo-types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+type UploadResponse = {
+  upload: {
+    id: string;
+    filename: string;
+    mediaType: string;
+    kind: "image" | "spreadsheet" | "document";
+    analysis: TabularAnalysisData["analysis"] | null;
+    prompt: string;
+  };
+};
+
+async function uploadAttachment(file: File) {
+  const data = new FormData();
+  data.append("file", file);
+  const response = await fetch("/api/uploads", { method: "POST", body: data });
+  const payload = await response.json() as UploadResponse | { error?: string };
+  if (!response.ok || !("upload" in payload)) {
+    throw new Error("error" in payload && payload.error ? payload.error : "อัปโหลดไฟล์ไม่สำเร็จ");
+  }
+  return payload.upload;
+}
 
 class DemoImageAttachmentAdapter extends SimpleImageAttachmentAdapter {
   override accept = "image/jpeg,image/png,image/webp,image/gif";
@@ -31,9 +56,52 @@ class DemoImageAttachmentAdapter extends SimpleImageAttachmentAdapter {
     }
     return super.add({ file });
   }
+
+  override async send(attachment: PendingAttachment): Promise<CompleteAttachment> {
+    await uploadAttachment(attachment.file);
+    return super.send(attachment);
+  }
 }
 
-const imageAttachmentAdapter = new DemoImageAttachmentAdapter();
+class DemoDocumentAttachmentAdapter implements AttachmentAdapter {
+  accept = ".csv,.xlsx,.xls,.pdf,.docx";
+
+  async add({ file }: { file: File }): Promise<PendingAttachment> {
+    if (file.size > 15 * 1024 * 1024) throw new Error("ไฟล์ต้องมีขนาดไม่เกิน 15 MB");
+    return {
+      id: crypto.randomUUID(),
+      type: "document",
+      name: file.name,
+      contentType: file.type,
+      file,
+      status: { type: "requires-action", reason: "composer-send" },
+    };
+  }
+
+  async send(attachment: PendingAttachment): Promise<CompleteAttachment> {
+    const upload = await uploadAttachment(attachment.file);
+    return {
+      ...attachment,
+      status: { type: "complete" },
+      content: [{
+        type: "file",
+        filename: upload.filename,
+        data: upload.id,
+        mimeType: upload.mediaType,
+        sourceType: "id",
+      }],
+    };
+  }
+
+  async remove() {
+    // The demo retains uploaded files for the Admin Files view.
+  }
+}
+
+const attachmentAdapter = new CompositeAttachmentAdapter([
+  new DemoImageAttachmentAdapter(),
+  new DemoDocumentAttachmentAdapter(),
+]);
 
 function KnowledgeState({ data }: DataMessagePartProps<KnowledgeStateData>) {
   const [sent, setSent] = useState(false);
@@ -98,42 +166,60 @@ function KnowledgeDataRenderer() {
   return null;
 }
 
+function TabularAnalysisCard({ data }: DataMessagePartProps<TabularAnalysisData>) {
+  const analysis = data.analysis as TabularAnalysisData["analysis"];
+  const chart = analysis.chart;
+  const maxValue = Math.max(...(chart?.points.map((point) => point.value) ?? [1]), 1);
+  return (
+    <section className="my-3 overflow-hidden rounded-xl border border-border bg-muted/35" aria-label={`สรุปไฟล์ ${data.filename}`}>
+      <div className="flex items-start gap-3 border-b border-border bg-card px-4 py-3">
+        <span className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary"><BarChart3 className="size-4" /></span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">วิเคราะห์ {data.filename}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{analysis.selectedSheet.name} · {analysis.selectedSheet.rowCount.toLocaleString()} แถว · {analysis.selectedSheet.columnCount} คอลัมน์</p>
+        </div>
+      </div>
+      {chart ? (
+        <div className="p-4">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <p className="text-sm font-medium">{chart.title}</p>
+            <p className="text-[11px] text-muted-foreground">สรุปผลรวมจากข้อมูลที่อ่านได้</p>
+          </div>
+          <div className="flex h-36 items-end gap-2 border-b border-border/80 pb-1" role="img" aria-label={chart.title}>
+            {chart.points.map((point) => (
+              <div key={point.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
+                <span className="text-[10px] text-muted-foreground">{point.value.toLocaleString()}</span>
+                <span className="w-full min-w-3 rounded-t-sm bg-primary/80" style={{ height: `${Math.max(7, (point.value / maxValue) * 100)}%` }} />
+                <span className="max-w-full truncate text-[10px] text-muted-foreground" title={point.label}>{point.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="px-4 py-3 text-xs leading-5 text-muted-foreground">ไม่สร้างกราฟอัตโนมัติ เพราะยังไม่พบคู่คอลัมน์ที่สรุปได้อย่างปลอดภัย</p>
+      )}
+      {analysis.caveats.slice(0, 2).map((caveat) => <p key={caveat} className="border-t border-border/70 px-4 py-2 text-[11px] leading-4 text-muted-foreground">{caveat}</p>)}
+    </section>
+  );
+}
+
+function FileAnalysisDataRenderer() {
+  useAssistantDataUI({ name: "tabular-analysis", render: TabularAnalysisCard });
+  return null;
+}
+
 export const Assistant = () => {
   const runtime = useChatRuntime({
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
-    adapters: { attachments: imageAttachmentAdapter },
+    adapters: { attachments: attachmentAdapter },
     transport: new AssistantChatTransport({
       api: "/api/chat",
     }),
   });
-  const config = AuiConfig({
-    suggestions: Suggestions([
-      {
-        title: "รับมือข้อกังวล",
-        label: "ลูกค้าขอปรึกษาคู่สมรสก่อน",
-        prompt: "ลูกค้าบอกว่าขอปรึกษาคู่สมรสก่อน ควรตอบอย่างไร?",
-      },
-      {
-        title: "วางแผนติดตาม",
-        label: "หลังนำเสนอแผน",
-        prompt: "หลังนำเสนอแผนแล้ว ควรติดตามลูกค้าอย่างไร?",
-      },
-      {
-        title: "ทดสอบ Knowledge Gap",
-        label: "คำถามที่ยังไม่มีข้อมูล",
-        prompt: "ลูกค้ารายนี้ควรเลือกกรมธรรม์ของบริษัท A หรือ B?",
-      },
-      {
-        title: "ดูภาพรวมเป็นกราฟ",
-        label: "Knowledge by category",
-        prompt: "ช่วยสรุปภาพรวม Knowledge ของทีมเป็นกราฟให้ดูหน่อย",
-      },
-    ]),
-  });
-
   return (
-    <AssistantRuntimeProvider runtime={runtime} config={config}>
+    <AssistantRuntimeProvider runtime={runtime} config={AuiConfig({})}>
       <KnowledgeDataRenderer />
+      <FileAnalysisDataRenderer />
       <div className="h-[calc(100dvh-3.75rem)]">
         <Thread />
       </div>

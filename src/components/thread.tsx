@@ -36,7 +36,6 @@ import {
   ErrorPrimitive,
   groupPartByType,
   MessagePrimitive,
-  SuggestionPrimitive,
   ThreadPrimitive,
   type FileMessagePartComponent,
   type ImageMessagePartComponent,
@@ -99,7 +98,7 @@ const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
     <ThreadPrimitive.Root
       className="aui-root aui-thread-root bg-background @container flex h-full flex-col"
       style={{
-        ["--thread-max-width" as string]: "56rem",
+        ["--thread-max-width" as string]: "48rem",
         ["--composer-bg" as string]: "var(--color-background)",
         ["--composer-radius" as string]: "0.75rem",
         ["--composer-padding" as string]: "8px",
@@ -110,7 +109,7 @@ const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
         data-slot="aui_thread-viewport"
         className="relative flex flex-1 flex-col overflow-x-auto overflow-y-scroll scroll-smooth"
       >
-        <div className={cn("mx-auto flex w-full max-w-(--thread-max-width) flex-1 flex-col px-4 pt-5 sm:px-6", isEmpty && "justify-center")}>
+        <div className={cn("mx-auto flex w-full max-w-(--thread-max-width) flex-1 flex-col px-4 pt-6 sm:px-6", isEmpty && "justify-center pb-10")}>
           <AuiIf condition={isNewChatView}><Welcome /></AuiIf>
           <div data-slot="aui_message-group" className="mb-14 flex flex-col gap-y-6 empty:hidden">
             <ThreadPrimitive.Messages>{() => <ThreadMessage />}</ThreadPrimitive.Messages>
@@ -124,9 +123,6 @@ const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
             <ThreadScrollToBottom />
             <ThreadFollowupSuggestions />
             <Composer />
-            <AuiIf condition={(state) => isNewChatView(state) && state.composer.isEmpty}>
-              <ThreadSuggestions />
-            </AuiIf>
           </ThreadPrimitive.ViewportFooter>
         </div>
       </ThreadPrimitive.Viewport>
@@ -150,57 +146,23 @@ const ThreadScrollToBottom: FC = () => (
 );
 
 const ThreadWelcome: FC = () => (
-  <div className="aui-thread-welcome-root mb-7 overflow-hidden rounded-2xl bg-[oklch(0.19_0.035_255)] text-[oklch(0.94_0.01_255)] ring-1 ring-[oklch(0.32_0.04_255)]">
-    <div className="grid gap-6 p-6 sm:p-7 lg:grid-cols-[1fr_260px] lg:items-end">
-      <div>
-        <div className="mb-5 flex items-center gap-2 font-mono text-[10px] text-[oklch(0.73_0.1_250)]">
-          <span className="size-1.5 rounded-full bg-[oklch(0.7_0.16_150)]" />
-          KNOWLEDGE AGENT ONLINE
-        </div>
-        <h1 className="aui-thread-welcome-message-inner max-w-[16ch] text-balance text-3xl font-bold tracking-[-0.035em] sm:text-4xl">
-          ถามงานได้เหมือนมีหัวหน้าทีมอยู่ข้างๆ
-        </h1>
-        <p className="mt-3 max-w-[58ch] text-pretty text-sm leading-6 text-[oklch(0.76_0.015_255)]">
-          น้องฟ้าจะเปิด Knowledge เมื่อจำเป็น สรุปให้เข้าใจง่าย และบอกตามตรงเมื่อข้อมูลยังไม่พอ
-        </p>
-      </div>
-      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-xl bg-white/10 lg:grid-cols-1">
-        {["Source-grounded", "Markdown ready", "Charts & insights"].map((label, index) => (
-          <div key={label} className="flex items-center gap-2 bg-[oklch(0.21_0.035_255)] px-3 py-2.5 text-[11px] text-[oklch(0.75_0.02_255)]">
-            <span className="font-mono text-[oklch(0.67_0.14_250)]">0{index + 1}</span>
-            <span>{label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const ThreadSuggestions: FC = () => (
-  <div className="aui-thread-welcome-suggestions grid w-full overflow-hidden rounded-xl bg-card ring-1 ring-border sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-border">
-    <ThreadPrimitive.Suggestions>{() => <ThreadSuggestionItem />}</ThreadPrimitive.Suggestions>
-  </div>
-);
-
-const ThreadSuggestionItem: FC = () => (
-  <div className="aui-thread-welcome-suggestion-display border-t first:border-t-0 sm:[&:nth-child(-n+2)]:border-t-0 lg:border-t-0">
-    <SuggestionPrimitive.Trigger
-      send
-      render={<Button variant="ghost" className="aui-thread-welcome-suggestion h-full min-h-24 w-full flex-col items-start justify-center gap-1 rounded-none px-4 py-3 text-left font-normal whitespace-normal transition-colors hover:bg-muted" />}
-    >
-      <SuggestionPrimitive.Title className="aui-thread-welcome-suggestion-text-1 text-sm font-semibold" />
-      <SuggestionPrimitive.Description className="aui-thread-welcome-suggestion-text-2 text-xs leading-5 text-muted-foreground empty:hidden" />
-    </SuggestionPrimitive.Trigger>
+  <div className="aui-thread-welcome-root mb-5 text-center">
+    <h1 className="aui-thread-welcome-message-inner text-balance text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+      วันนี้ให้ช่วยอะไรดี?
+    </h1>
+    <p className="mx-auto mt-2 max-w-[40ch] text-sm leading-6 text-muted-foreground">
+      ถามน้องฟ้าได้เลย ระบบจะค้น Knowledge ของทีมเมื่อจำเป็น
+    </p>
   </div>
 );
 
 const Composer: FC = () => (
   <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
-    <div data-slot="aui_composer-shell" className="flex w-full flex-col gap-2 rounded-(--composer-radius) bg-card p-(--composer-padding) ring-1 ring-input transition-[box-shadow] focus-within:ring-2 focus-within:ring-ring">
+    <div data-slot="aui_composer-shell" className="flex w-full flex-col gap-2 rounded-2xl bg-card p-3 shadow-sm ring-1 ring-input transition-[box-shadow] focus-within:ring-2 focus-within:ring-ring">
       <ComposerAttachments />
       <ComposerPrimitive.Input
         placeholder="ถามน้องฟ้าจาก Knowledge ของทีม..."
-        className="aui-composer-input caret-primary placeholder:text-muted-foreground/80 max-h-32 min-h-10 w-full resize-none bg-transparent px-2.5 py-1 text-base outline-none"
+        className="aui-composer-input caret-primary placeholder:text-muted-foreground/80 max-h-32 min-h-14 w-full resize-none bg-transparent px-2.5 py-1 text-base outline-none"
         rows={1}
         autoFocus
         enterKeyHint="send"
@@ -214,8 +176,9 @@ const Composer: FC = () => (
 const ComposerAction: FC = () => (
   <div className="aui-composer-action-wrapper relative flex items-center justify-end">
     <div className="flex w-full items-center justify-between gap-1.5">
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <ComposerAddAttachment />
+        <span className="text-[11px] text-muted-foreground">แนบรูปหรือไฟล์ข้อมูลได้</span>
         <span className="sr-only" aria-live="polite">
           <ComposerPrimitive.Attachments>{() => "รูปภาพแนบแล้ว"}</ComposerPrimitive.Attachments>
         </span>
