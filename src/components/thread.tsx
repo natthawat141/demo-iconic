@@ -161,45 +161,38 @@ const ThreadWelcome: FC = () => (
 
 const Composer: FC = () => (
   <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
-    <div data-slot="aui_composer-shell" className="flex w-full flex-col gap-2 rounded-2xl bg-card p-3 shadow-sm ring-1 ring-input transition-[box-shadow] focus-within:ring-2 focus-within:ring-ring">
+    <div data-slot="aui_composer-shell" className="flex w-full flex-col gap-2 rounded-[1.45rem] bg-card px-2.5 py-2 shadow-sm ring-1 ring-input transition-[box-shadow] focus-within:ring-2 focus-within:ring-ring">
       <ComposerAttachments />
-      <ComposerPrimitive.Input
-        placeholder="ถามอะไรก็ได้ หรือถามเรื่องงานของทีม..."
-        className="aui-composer-input caret-primary placeholder:text-muted-foreground/80 max-h-32 min-h-14 w-full resize-none bg-transparent px-2.5 py-1 text-base outline-none"
-        rows={1}
-        autoFocus
-        enterKeyHint="send"
-        aria-label="พิมพ์คำถามถึงน้องฟ้า"
-      />
-      <ComposerAction />
+      <div className="flex min-h-11 items-end gap-1.5">
+        <ComposerAddAttachment />
+        <ComposerPrimitive.Input
+          placeholder="ถามน้องฟ้า..."
+          className="aui-composer-input caret-primary placeholder:text-muted-foreground/80 max-h-36 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-5 outline-none"
+          rows={1}
+          autoFocus
+          enterKeyHint="send"
+          aria-label="พิมพ์คำถามถึงน้องฟ้า"
+        />
+        <ComposerAction />
+      </div>
     </div>
+    <p className="mt-2 text-center text-[10px] text-muted-foreground">น้องฟ้าอาจผิดพลาด โปรดตรวจสอบข้อมูลสำคัญ</p>
   </ComposerPrimitive.Root>
 );
 
 const ComposerAction: FC = () => (
-  <div className="aui-composer-action-wrapper relative flex items-center justify-end">
-    <div className="flex w-full items-center justify-between gap-1.5">
-      <div className="flex items-center gap-2">
-        <ComposerAddAttachment />
-        <span className="text-[11px] text-muted-foreground">แนบรูปหรือไฟล์ข้อมูลได้</span>
-        <span className="sr-only" aria-live="polite">
-          <ComposerPrimitive.Attachments>{() => "รูปภาพแนบแล้ว"}</ComposerPrimitive.Attachments>
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <AuiIf condition={(state) => state.thread.capabilities.dictation}>
-          <AuiIf condition={(state) => state.composer.dictation == null}>
-            <ComposerPrimitive.Dictate render={<TooltipIconButton tooltip="Voice input" side="bottom" type="button" variant="ghost" size="icon" className="aui-composer-dictate size-7 rounded-full" aria-label="Start voice input" />}><MicIcon className="size-4" /></ComposerPrimitive.Dictate>
-          </AuiIf>
-        </AuiIf>
-        <AuiIf condition={(state) => !state.thread.isRunning}>
-          <ComposerPrimitive.Send render={<TooltipIconButton tooltip="ส่งคำถาม" side="bottom" type="button" variant="default" size="icon" className="aui-composer-send size-10 rounded-lg" aria-label="ส่งคำถาม" />}><ArrowUpIcon className="size-4.5" /></ComposerPrimitive.Send>
-        </AuiIf>
-        <AuiIf condition={(state) => state.thread.isRunning}>
-          <ComposerPrimitive.Cancel render={<Button type="button" variant="default" size="icon" className="aui-composer-cancel size-7 rounded-full" aria-label="Stop generating" />}><SquareIcon className="size-3.5 fill-current" /></ComposerPrimitive.Cancel>
-        </AuiIf>
-      </div>
-    </div>
+  <div className="aui-composer-action-wrapper flex shrink-0 items-center gap-1">
+    <AuiIf condition={(state) => state.thread.capabilities.dictation}>
+      <AuiIf condition={(state) => state.composer.dictation == null}>
+        <ComposerPrimitive.Dictate render={<TooltipIconButton tooltip="Voice input" side="bottom" type="button" variant="ghost" size="icon" className="aui-composer-dictate size-9 rounded-full" aria-label="Start voice input" />}><MicIcon className="size-4" /></ComposerPrimitive.Dictate>
+      </AuiIf>
+    </AuiIf>
+    <AuiIf condition={(state) => !state.thread.isRunning}>
+      <ComposerPrimitive.Send render={<TooltipIconButton tooltip="ส่งคำถาม" side="bottom" type="button" variant="default" size="icon" className="aui-composer-send size-9 rounded-full" aria-label="ส่งคำถาม" />}><ArrowUpIcon className="size-4" /></ComposerPrimitive.Send>
+    </AuiIf>
+    <AuiIf condition={(state) => state.thread.isRunning}>
+      <ComposerPrimitive.Cancel render={<Button type="button" variant="default" size="icon" className="aui-composer-cancel size-9 rounded-full" aria-label="Stop generating" />}><SquareIcon className="size-3.5 fill-current" /></ComposerPrimitive.Cancel>
+    </AuiIf>
   </div>
 );
 
