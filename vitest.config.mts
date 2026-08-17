@@ -5,6 +5,7 @@ export default defineConfig({
     environment: "node",
     exclude: [".next/**", "node_modules/**"],
     sequence: { concurrent: false },
+    setupFiles: ["./src/test/setup.ts"],
   },
   resolve: {
     alias: {
