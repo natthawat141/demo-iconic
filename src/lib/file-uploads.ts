@@ -59,7 +59,7 @@ export function classifyUpload(file: Pick<File, "name" | "type" | "size">): {
 
   const extension = extensionFor(file);
   const declared = file.type.toLowerCase();
-  const mediaType = declared || (
+  const inferredMediaType = (
     [".jpg", ".jpeg"].includes(extension) ? "image/jpeg"
       : extension === ".png" ? "image/png"
         : extension === ".webp" ? "image/webp"
@@ -71,6 +71,12 @@ export function classifyUpload(file: Pick<File, "name" | "type" | "size">): {
                     : extension === ".docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       : "application/octet-stream"
   );
+  // Windows and some browser integrations report generic MIME types for a
+  // perfectly valid local file. The extension is still allow-listed below, so
+  // prefer our known extension mapping in that case instead of rejecting it.
+  const mediaType = declared && declared !== "application/octet-stream"
+    ? declared
+    : inferredMediaType;
 
   if (imageTypes.has(mediaType) && [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(extension)) {
     if (file.size > 5 * 1024 * 1024) throw new Error("รูปภาพต้องมีขนาดไม่เกิน 5 MB");
