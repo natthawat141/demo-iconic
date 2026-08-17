@@ -55,6 +55,8 @@ import {
   PencilIcon,
   RefreshCwIcon,
   SquareIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
 } from "lucide-react";
 import {
   createContext,
@@ -62,6 +64,7 @@ import {
   type ComponentType,
   type FC,
   type PropsWithChildren,
+  useState,
 } from "react";
 
 export type ThreadGroupPart = MessagePrimitive.GroupedParts.GroupPart;
@@ -246,9 +249,34 @@ const AssistantMessage: FC = () => {
       </div>
       <div className="flex items-center justify-between pt-1.5">
         <BranchPicker />
-        <AssistantActionBar />
+        <div className="flex items-center gap-1"><AnswerFeedback /><AssistantActionBar /></div>
       </div>
     </MessagePrimitive.Root>
+  );
+};
+
+const AnswerFeedback: FC = () => {
+  const messageId = useAuiState((state) => state.message.id);
+  const [selected, setSelected] = useState<"up" | "down" | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function submit(value: "up" | "down") {
+    if (saving || selected === value) return;
+    setSaving(true);
+    const response = await fetch(`/api/messages/${messageId}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value }),
+    });
+    setSaving(false);
+    if (response.ok) setSelected(value);
+  }
+
+  return (
+    <div className="flex items-center gap-0.5" aria-label="ให้คะแนนคำตอบ">
+      <Button type="button" variant="ghost" size="icon" className={cn("size-7 text-muted-foreground", selected === "up" && "bg-primary/10 text-primary")} onClick={() => void submit("up")} disabled={saving} aria-label="คำตอบมีประโยชน์" title="คำตอบมีประโยชน์"><ThumbsUpIcon className="size-3.5" /></Button>
+      <Button type="button" variant="ghost" size="icon" className={cn("size-7 text-muted-foreground", selected === "down" && "bg-destructive/10 text-destructive")} onClick={() => void submit("down")} disabled={saving} aria-label="คำตอบยังไม่ตรง" title="คำตอบยังไม่ตรง"><ThumbsDownIcon className="size-3.5" /></Button>
+    </div>
   );
 };
 

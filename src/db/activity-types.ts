@@ -35,6 +35,13 @@ export type AnswerSource = {
   url: string;
 };
 
+export type AnswerFeedback = {
+  messageId: string;
+  userId: string;
+  value: "up" | "down";
+  createdAt: Date;
+};
+
 export type UploadedFile = {
   id: string;
   userId: string;
@@ -53,6 +60,7 @@ export type ConversationDetail = {
   conversation: Conversation;
   messages: ConversationMessage[];
   sources: AnswerSource[];
+  feedback: AnswerFeedback[];
 };
 
 export type NewUploadedFile = Omit<UploadedFile, "createdAt">;

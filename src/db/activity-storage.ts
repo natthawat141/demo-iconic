@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import { sqlite } from "./client";
 import type {
   AnswerSource,
+  AnswerFeedback,
   Conversation,
   ConversationDetail,
   ConversationMessage,
@@ -118,6 +119,13 @@ async function ensurePostgresReady() {
         url TEXT NOT NULL,
         PRIMARY KEY (message_id, source_id)
       );
+      CREATE TABLE IF NOT EXISTS answer_feedback (
+        message_id VARCHAR(128) NOT NULL REFERENCES conversation_messages(id) ON DELETE CASCADE,
+        user_id VARCHAR(128) NOT NULL REFERENCES demo_users(id) ON DELETE CASCADE,
+        value VARCHAR(8) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (message_id, user_id)
+      );
       CREATE TABLE IF NOT EXISTS uploaded_files (
         id VARCHAR(128) PRIMARY KEY,
         user_id VARCHAR(128) NOT NULL REFERENCES demo_users(id) ON DELETE CASCADE,
@@ -134,6 +142,7 @@ async function ensurePostgresReady() {
       CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC);
       CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON conversation_messages(conversation_id, created_at);
       CREATE INDEX IF NOT EXISTS idx_files_user_created ON uploaded_files(user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_feedback_message ON answer_feedback(message_id);
     `);
   })();
   return postgresReady;
@@ -170,6 +179,13 @@ function ensureSqliteReady() {
       url TEXT NOT NULL,
       PRIMARY KEY (message_id, source_id)
     );
+    CREATE TABLE IF NOT EXISTS answer_feedback (
+      message_id TEXT NOT NULL REFERENCES conversation_messages(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES demo_users(id) ON DELETE CASCADE,
+      value TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (message_id, user_id)
+    );
     CREATE TABLE IF NOT EXISTS uploaded_files (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES demo_users(id) ON DELETE CASCADE,
@@ -186,6 +202,7 @@ function ensureSqliteReady() {
     CREATE INDEX IF NOT EXISTS idx_conversations_user_updated ON conversations(user_id, updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON conversation_messages(conversation_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_files_user_created ON uploaded_files(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_feedback_message ON answer_feedback(message_id);
   `);
   sqliteReady = true;
 }
@@ -355,10 +372,16 @@ export const activityStorage = {
         INNER JOIN conversation_messages ON conversation_messages.id = answer_sources.message_id
         WHERE conversation_messages.conversation_id = $1
       `, [id]);
+      const feedback = await getPostgresPool().query<DatabaseRow>(`
+        SELECT answer_feedback.* FROM answer_feedback
+        INNER JOIN conversation_messages ON conversation_messages.id = answer_feedback.message_id
+        WHERE conversation_messages.conversation_id = $1
+      `, [id]);
       return {
         conversation: mapConversation(conversation.rows[0]),
         messages: messages.rows.map(mapMessage),
         sources: sources.rows.map((row) => ({ messageId: String(row.message_id), sourceId: String(row.source_id), title: String(row.title), url: String(row.url) })),
+        feedback: feedback.rows.map((row) => ({ messageId: String(row.message_id), userId: String(row.user_id), value: row.value as AnswerFeedback["value"], createdAt: date(row.created_at) })),
       };
     }, () => {
       ensureSqliteReady();
@@ -370,10 +393,16 @@ export const activityStorage = {
         INNER JOIN conversation_messages ON conversation_messages.id = answer_sources.message_id
         WHERE conversation_messages.conversation_id = ?
       `).all(id) as DatabaseRow[];
+      const feedback = sqlite.prepare(`
+        SELECT answer_feedback.* FROM answer_feedback
+        INNER JOIN conversation_messages ON conversation_messages.id = answer_feedback.message_id
+        WHERE conversation_messages.conversation_id = ?
+      `).all(id) as DatabaseRow[];
       return {
         conversation: mapConversation(conversation),
         messages: messages.map(mapMessage),
         sources: sources.map((row) => ({ messageId: String(row.message_id), sourceId: String(row.source_id), title: String(row.title), url: String(row.url) })),
+        feedback: feedback.map((row) => ({ messageId: String(row.message_id), userId: String(row.user_id), value: row.value as AnswerFeedback["value"], createdAt: date(row.created_at) })),
       };
     });
   },
@@ -433,6 +462,47 @@ export const activityStorage = {
       ensureSqliteReady();
       const update = sqlite.prepare("UPDATE uploaded_files SET conversation_id = ? WHERE id = ? AND user_id = ?");
       sqlite.transaction(() => ids.forEach((id) => update.run(conversationId, id, userId)))();
+    });
+  },
+
+  async getMessageOwner(messageId: string) {
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const result = await getPostgresPool().query<DatabaseRow>(`
+        SELECT conversations.user_id, conversation_messages.conversation_id
+        FROM conversation_messages
+        INNER JOIN conversations ON conversations.id = conversation_messages.conversation_id
+        WHERE conversation_messages.id = $1 AND conversation_messages.role = 'assistant'
+      `, [messageId]);
+      return result.rows[0] ? { userId: String(result.rows[0].user_id), conversationId: String(result.rows[0].conversation_id) } : null;
+    }, () => {
+      ensureSqliteReady();
+      const row = sqlite.prepare(`
+        SELECT conversations.user_id, conversation_messages.conversation_id
+        FROM conversation_messages
+        INNER JOIN conversations ON conversations.id = conversation_messages.conversation_id
+        WHERE conversation_messages.id = ? AND conversation_messages.role = 'assistant'
+      `).get(messageId) as DatabaseRow | undefined;
+      return row ? { userId: String(row.user_id), conversationId: String(row.conversation_id) } : null;
+    });
+  },
+
+  async saveFeedback(messageId: string, userId: string, value: AnswerFeedback["value"]) {
+    const now = new Date();
+    return withStore(async () => {
+      await ensurePostgresReady();
+      await getPostgresPool().query(
+        `INSERT INTO answer_feedback (message_id, user_id, value, created_at)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (message_id, user_id) DO UPDATE SET value = EXCLUDED.value, created_at = EXCLUDED.created_at`,
+        [messageId, userId, value, now],
+      );
+    }, () => {
+      ensureSqliteReady();
+      sqlite.prepare(`
+        INSERT INTO answer_feedback (message_id, user_id, value, created_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(message_id, user_id) DO UPDATE SET value = excluded.value, created_at = excluded.created_at
+      `).run(messageId, userId, value, now.getTime());
     });
   },
 };

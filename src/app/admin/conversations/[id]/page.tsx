@@ -19,6 +19,7 @@ export default async function AdminConversationDetailPage({
   for (const source of detail.sources) {
     sourcesByMessage.set(source.messageId, [...(sourcesByMessage.get(source.messageId) ?? []), source]);
   }
+  const feedbackByMessage = new Map(detail.feedback.map((feedback) => [feedback.messageId, feedback]));
 
   return (
     <div className="mx-auto max-w-[900px] px-4 py-6 sm:px-6 lg:py-8">
@@ -35,6 +36,7 @@ export default async function AdminConversationDetailPage({
             <p className="whitespace-pre-wrap text-sm leading-6">{message.content || "(ไฟล์แนบ)"}</p>
             {message.attachments.map((attachment, index) => <p key={`${attachment.filename}-${index}`} className="mt-2 flex items-center gap-1.5 text-xs opacity-70"><FileText className="size-3" /> {attachment.filename ?? "ไฟล์แนบ"} · {attachment.mediaType}</p>)}
             {(sourcesByMessage.get(message.id) ?? []).map((source) => <Link key={source.sourceId} href={source.url} className="mt-2 block text-xs font-medium text-primary underline underline-offset-4">Source: {source.title}</Link>)}
+            {feedbackByMessage.get(message.id) ? <p className="mt-2 text-xs opacity-70">Feedback: {feedbackByMessage.get(message.id)?.value === "up" ? "มีประโยชน์" : "ยังไม่ตรง"}</p> : null}
             <p className="mt-2 text-[10px] opacity-60">{message.createdAt.toLocaleString("th-TH")}</p>
           </article>
         ))}

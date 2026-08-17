@@ -168,6 +168,10 @@ function writeFileAnalyses(
 
 function writeText(writer: { write: (chunk: UIMessageChunk) => void }, text: string) {
   const id = crypto.randomUUID();
+  // Custom UI streams do not create a start chunk automatically. Sending it
+  // lets AI SDK give the browser the exact same assistant-message ID that we
+  // persist, which also makes per-answer feedback addressable.
+  writer.write({ type: "start" });
   writer.write({ type: "text-start", id });
   writer.write({ type: "text-delta", id, delta: text });
   writer.write({ type: "text-end", id });
