@@ -75,11 +75,15 @@ export function classifyUpload(file: Pick<File, "name" | "type" | "size">): {
 }
 
 function localGcloudStorage() {
-  const gcloudCommand = process.platform === "win32" ? "gcloud.cmd" : "gcloud";
-  const accessToken = execFileSync(gcloudCommand, ["auth", "print-access-token"], {
+  const command = process.platform === "win32"
+    ? process.env.ComSpec ?? "cmd.exe"
+    : "gcloud";
+  const args = process.platform === "win32"
+    ? ["/d", "/s", "/c", "gcloud auth print-access-token"]
+    : ["auth", "print-access-token"];
+  const accessToken = execFileSync(command, args, {
     encoding: "utf8",
     windowsHide: true,
-    shell: process.platform === "win32",
   }).trim();
   if (!accessToken) throw new Error("ไม่พบ Google Cloud access token สำหรับการอัปโหลด");
   const authClient = new OAuth2Client();
