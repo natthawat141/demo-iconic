@@ -11,12 +11,13 @@ const greetingPattern = /^(hi|hello|hey|yo|สวัสดี|หวัดดี
 const thanksPattern = /^(ขอบคุณ|ขอบคุณครับ|ขอบคุณค่ะ|thanks|thank you|โอเค|ok|okay)$/iu;
 const helpPattern = /^(ช่วยอะไรได้บ้าง|ทำอะไรได้บ้าง|คุณทำอะไรได้บ้าง|ใช้ยังไง|how can you help|what can you do)$/iu;
 const identityPattern = /^(คุณคือใคร|เธอคือใคร|น้องฟ้าคือใคร|who are you|what are you)$/iu;
-const overviewPattern = /(ภาพรวม|สรุป.*knowledge|knowledge.*สรุป|dashboard|chart|กราฟ|สถิติ.*knowledge)/iu;
+const overviewPattern = /(ภาพรวม.*knowledge|knowledge.*ภาพรวม|สรุป.*knowledge|knowledge.*สรุป|dashboard|สถิติ.*knowledge|knowledge.*(?:chart|graph|กราฟ|แผนภูมิ)|(?:chart|graph|กราฟ|แผนภูมิ).*knowledge)/iu;
+const visualizationPattern = /(chart|graph|กราฟ|แผนภูมิ|visuali[sz]e|แนวโน้ม)/iu;
 const internalContextPattern = /(iconic|น้องฟ้า|knowledge|ทีม(?:เรา)?|ของเรา|ของระบบเรา|ระบบ(?:ของ)?(?:เรา|ทีม)|ลูกค้า|กรมธรรม์|แนวทางขาย|ติดตามลูกค้า|หัวหน้าทีม)/iu;
 const generalDefinitionPattern = /^(api|apis|ฐานข้อมูล|database|rag|vector database|markdown|excel|csv)\s*(คืออะไร|คืออะไรครับ|คืออะไรคะ|หมายความว่าอะไร|what is)/iu;
 const ambiguousWorkPattern = /^(api|ขั้นตอน|นโยบาย|ข้อมูล|ระบบ|knowledge)\s*(ล่ะ|คืออะไร|หมายถึงอะไร|ยังไง)?$/iu;
 
-export type ChatIntent = "smalltalk" | "general" | "knowledge" | "overview" | "ambiguous";
+export type ChatIntent = "smalltalk" | "general" | "knowledge" | "overview" | "visualize" | "ambiguous";
 
 export function conversationalReply(message: string) {
   const normalized = normalizeMessage(message);
@@ -44,6 +45,7 @@ export function classifyChatIntent(message: string, previousContext = ""): ChatI
   const normalized = normalizeMessage(message);
   if (conversationalReply(message)) return "smalltalk";
   if (overviewPattern.test(normalized)) return "overview";
+  if (visualizationPattern.test(normalized)) return "visualize";
   if (generalDefinitionPattern.test(normalized)) return "general";
   if (internalContextPattern.test(normalized)) return "knowledge";
   if (ambiguousWorkPattern.test(normalized)) {

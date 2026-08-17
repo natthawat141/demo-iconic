@@ -29,4 +29,12 @@ describe("chat intent routing", () => {
   it("uses prior context to resolve a short follow-up", () => {
     expect(classifyChatIntent("API ล่ะ", "API ของระบบ ICONIC")).toBe("knowledge");
   });
+
+  it("keeps a chart request based on supplied data out of the Knowledge overview path", () => {
+    expect(classifyChatIntent("ช่วยทำกราฟยอดขายจาก Excel นี้")).toBe("visualize");
+  });
+
+  it("routes an explicit Knowledge chart to the overview path", () => {
+    expect(classifyChatIntent("ขอกราฟภาพรวม Knowledge")).toBe("overview");
+  });
 });

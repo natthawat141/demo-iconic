@@ -23,6 +23,12 @@ type OverviewResult = {
   categories: Array<{ label: string; value: number }>;
 };
 
+type ConversationChartResult = {
+  title: string;
+  kind: "bar" | "line";
+  points: Array<{ label: string; value: number }>;
+};
+
 function isSearchResult(value: unknown): value is SearchResult {
   return Boolean(value && typeof value === "object" && "found" in value);
 }
@@ -33,6 +39,14 @@ function isOverviewResult(value: unknown): value is OverviewResult {
       typeof value === "object" &&
       "categories" in value &&
       Array.isArray((value as OverviewResult).categories),
+  );
+}
+
+function isConversationChartResult(value: unknown): value is ConversationChartResult {
+  return Boolean(
+    value && typeof value === "object" &&
+      "title" in value && "kind" in value && "points" in value &&
+      Array.isArray((value as ConversationChartResult).points),
   );
 }
 
@@ -125,4 +139,41 @@ export function KnowledgeOverviewTool({
       </div>
     </figure>
   );
+}
+
+export function ConversationChartTool({
+  status,
+  result,
+}: {
+  status?: ToolCallMessagePartStatus;
+  result?: unknown;
+}) {
+  if (status?.type === "running" || !isConversationChartResult(result)) {
+    return <div className="my-3 flex items-center gap-2 rounded-xl bg-card p-4 text-sm text-muted-foreground ring-1 ring-border"><LoaderCircle className="size-4 animate-spin text-primary" /> กำลังจัดข้อมูลเป็นกราฟ...</div>;
+  }
+  const max = Math.max(...result.points.map((point) => point.value), 1);
+  const range = max;
+  const linePoints = result.points.map((point, index) => {
+    const x = result.points.length === 1 ? 50 : 6 + (index / (result.points.length - 1)) * 88;
+    const y = 92 - (point.value / range) * 80;
+    return `${x},${y}`;
+  }).join(" ");
+  return <figure className="my-4 overflow-hidden rounded-xl bg-card ring-1 ring-border">
+    <figcaption className="flex items-center gap-2 border-b border-border px-4 py-3 text-sm font-semibold"><BarChart3 className="size-4 text-primary" /> {result.title}</figcaption>
+    <div className="p-4">
+      {result.kind === "line" ? <div className="h-40" role="img" aria-label={`กราฟเส้น ${result.title}`}>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full overflow-visible" aria-hidden="true">
+          <line x1="6" x2="94" y1="92" y2="92" stroke="currentColor" className="text-border" strokeWidth="0.7" />
+          <polyline fill="none" points={linePoints} stroke="var(--color-primary)" strokeWidth="2.4" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+          {result.points.map((point, index) => {
+            const [x, y] = linePoints.split(" ")[index]!.split(",");
+            return <circle key={point.label} cx={x} cy={y} r="1.8" fill="var(--color-primary)" vectorEffect="non-scaling-stroke" />;
+          })}
+        </svg>
+      </div> : <div className="flex h-40 items-end gap-2 border-b border-border/80 pb-1" role="img" aria-label={`กราฟแท่ง ${result.title}`}>
+        {result.points.map((point) => <div key={point.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1"><span className="text-[10px] text-muted-foreground">{point.value.toLocaleString()}</span><span className="w-full min-w-3 rounded-t-sm bg-primary/80" style={{ height: `${Math.max(7, (point.value / max) * 100)}%` }} /></div>)}
+      </div>}
+      <div className="mt-2 grid grid-cols-3 gap-x-2 gap-y-1.5 text-center sm:grid-cols-6">{result.points.map((point) => <span key={point.label} className="truncate text-[10px] text-muted-foreground" title={`${point.label}: ${point.value}`}>{point.label}</span>)}</div>
+    </div>
+  </figure>;
 }

@@ -375,19 +375,57 @@ export const activityStorage = {
     });
   },
 
-  async listConversations(options: { userId?: string; limit?: number } = {}) {
+  async listConversations(options: { userId?: string; query?: string; limit?: number } = {}) {
     const limit = options.limit ?? 100;
+    const query = options.query?.normalize("NFKC").trim().slice(0, 100) ?? "";
+    const pattern = `%${query}%`;
     return withStore(async () => {
       await ensurePostgresReady();
-      const result = options.userId
-        ? await getPostgresPool().query<DatabaseRow>("SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2", [options.userId, limit])
-        : await getPostgresPool().query<DatabaseRow>("SELECT * FROM conversations ORDER BY updated_at DESC LIMIT $1", [limit]);
+      const result = options.userId && query
+        ? await getPostgresPool().query<DatabaseRow>(`
+          SELECT * FROM conversations
+          WHERE user_id = $1 AND (
+            title ILIKE $2 OR EXISTS (
+              SELECT 1 FROM conversation_messages
+              WHERE conversation_messages.conversation_id = conversations.id AND conversation_messages.content ILIKE $2
+            )
+          )
+          ORDER BY updated_at DESC LIMIT $3`, [options.userId, pattern, limit])
+        : options.userId
+          ? await getPostgresPool().query<DatabaseRow>("SELECT * FROM conversations WHERE user_id = $1 ORDER BY updated_at DESC LIMIT $2", [options.userId, limit])
+          : query
+            ? await getPostgresPool().query<DatabaseRow>(`
+              SELECT * FROM conversations
+              WHERE title ILIKE $1 OR EXISTS (
+                SELECT 1 FROM conversation_messages
+                WHERE conversation_messages.conversation_id = conversations.id AND conversation_messages.content ILIKE $1
+              )
+              ORDER BY updated_at DESC LIMIT $2`, [pattern, limit])
+            : await getPostgresPool().query<DatabaseRow>("SELECT * FROM conversations ORDER BY updated_at DESC LIMIT $1", [limit]);
       return result.rows.map(mapConversation);
     }, () => {
       ensureSqliteReady();
-      const rows = options.userId
-        ? sqlite.prepare("SELECT * FROM conversations WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?").all(options.userId, limit)
-        : sqlite.prepare("SELECT * FROM conversations ORDER BY updated_at DESC LIMIT ?").all(limit);
+      const rows = options.userId && query
+        ? sqlite.prepare(`
+          SELECT * FROM conversations
+          WHERE user_id = ? AND (
+            title LIKE ? COLLATE NOCASE OR EXISTS (
+              SELECT 1 FROM conversation_messages
+              WHERE conversation_messages.conversation_id = conversations.id AND conversation_messages.content LIKE ? COLLATE NOCASE
+            )
+          )
+          ORDER BY updated_at DESC LIMIT ?`).all(options.userId, pattern, pattern, limit)
+        : options.userId
+          ? sqlite.prepare("SELECT * FROM conversations WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?").all(options.userId, limit)
+          : query
+            ? sqlite.prepare(`
+              SELECT * FROM conversations
+              WHERE title LIKE ? COLLATE NOCASE OR EXISTS (
+                SELECT 1 FROM conversation_messages
+                WHERE conversation_messages.conversation_id = conversations.id AND conversation_messages.content LIKE ? COLLATE NOCASE
+              )
+              ORDER BY updated_at DESC LIMIT ?`).all(pattern, pattern, limit)
+            : sqlite.prepare("SELECT * FROM conversations ORDER BY updated_at DESC LIMIT ?").all(limit);
       return (rows as DatabaseRow[]).map(mapConversation);
     });
   },

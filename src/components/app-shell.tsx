@@ -17,6 +17,7 @@ import {
   Moon,
   Plus,
   RotateCcw,
+  Search,
   Settings2,
   ShieldCheck,
   Sun,
@@ -31,6 +32,7 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouse
 
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,8 +64,10 @@ type ConversationSummary = {
   updatedAt: string;
 };
 
-async function requestConversationHistory() {
-  const response = await fetch("/api/conversations", { cache: "no-store" });
+async function requestConversationHistory(query = "") {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  const response = await fetch(`/api/conversations${params.size ? `?${params}` : ""}`, { cache: "no-store" });
   if (!response.ok) throw new Error("โหลดประวัติการสนทนาไม่สำเร็จ");
   const payload = await response.json() as { conversations?: ConversationSummary[] };
   return payload.conversations ?? [];
@@ -166,20 +170,24 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
   const router = useRouter();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const requestRef = useRef(0);
 
   const refreshHistory = useCallback(async () => {
+    const requestId = ++requestRef.current;
+    setLoading(true);
     try {
-      const items = await requestConversationHistory();
-      setConversations(items);
+      const items = await requestConversationHistory(query.trim());
+      if (requestId === requestRef.current) setConversations(items);
     } catch {
       // The chat itself remains available even if the history request is transiently unavailable.
     } finally {
-      setLoading(false);
+      if (requestId === requestRef.current) setLoading(false);
     }
-  }, []);
+  }, [query]);
 
   useEffect(() => {
-    const initialRefresh = window.setTimeout(() => void refreshHistory(), 0);
+    const initialRefresh = window.setTimeout(() => void refreshHistory(), query ? 180 : 0);
     const refresh = () => void refreshHistory();
     window.addEventListener("iconic:conversation-updated", refresh);
     window.addEventListener("focus", refresh);
@@ -188,7 +196,7 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
       window.removeEventListener("iconic:conversation-updated", refresh);
       window.removeEventListener("focus", refresh);
     };
-  }, [refreshHistory]);
+  }, [query, refreshHistory]);
 
   function startNewConversation() {
     onNavigate();
@@ -213,11 +221,23 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
           <Plus className="size-3.5" />
         </Button>
       </div>
+      <div className="relative mb-2 px-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="ค้นหาแชตเก่า..."
+          aria-label="ค้นหาประวัติแชตของฉัน"
+          className="h-8 bg-sidebar pl-7 pr-7 text-xs"
+        />
+        {query ? <Button type="button" variant="ghost" size="icon-sm" onClick={() => setQuery("")} className="absolute right-1 top-1/2 -translate-y-1/2" aria-label="ล้างคำค้น"><X className="size-3" /></Button> : null}
+      </div>
       <div className="space-y-0.5" aria-live="polite" aria-busy={loading}>
         {loading ? (
           <p className="px-2.5 py-2 text-xs text-muted-foreground">กำลังโหลด...</p>
         ) : conversations.length === 0 ? (
-          <p className="px-2.5 py-2 text-xs leading-5 text-muted-foreground">เริ่มถามเพื่อเก็บบทสนทนาไว้ที่นี่</p>
+          <p className="px-2.5 py-2 text-xs leading-5 text-muted-foreground">{query ? "ไม่พบแชตที่มีคำนี้" : "เริ่มถามเพื่อเก็บบทสนทนาไว้ที่นี่"}</p>
         ) : conversations.map((conversation) => <ConversationHistoryItem key={conversation.id} conversation={conversation} onNavigate={onNavigate} onDelete={deleteConversation} />)}
       </div>
     </section>

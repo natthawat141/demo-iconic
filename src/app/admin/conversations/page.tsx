@@ -1,8 +1,9 @@
-import { ArrowUpRight, MessageSquareText, UserRound } from "lucide-react";
+import { ArrowUpRight, MessageSquareText, Search, UserRound } from "lucide-react";
 import Link from "next/link";
 
 import { activityStorage } from "@/db/activity-storage";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,11 @@ function displayId(id: string) {
 export default async function AdminConversationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ user?: string }>;
+  searchParams: Promise<{ user?: string; q?: string }>;
 }) {
-  const { user } = await searchParams;
-  const conversations = await activityStorage.listConversations({ userId: user, limit: 150 });
+  const { user, q: rawQuery } = await searchParams;
+  const q = rawQuery?.normalize("NFKC").trim().slice(0, 100) ?? "";
+  const conversations = await activityStorage.listConversations({ userId: user, query: q, limit: 150 });
 
   return (
     <div className="mx-auto max-w-[1180px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
@@ -26,8 +28,20 @@ export default async function AdminConversationsPage({
           <h1 className="mt-2 text-2xl font-bold tracking-[-0.03em]">บทสนทนาของทีม</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">อ่านข้อความที่บันทึกพร้อม Source Cards เพื่อ review การตอบและหา Knowledge Gap ต่อได้</p>
         </div>
-        {user ? <Button render={<Link href="/admin/conversations" />} nativeButton={false} variant="outline" size="sm">แสดงทุกผู้ใช้</Button> : null}
+        {user ? <Button render={<Link href={q ? `/admin/conversations?q=${encodeURIComponent(q)}` : "/admin/conversations"} />} nativeButton={false} variant="outline" size="sm">แสดงทุกผู้ใช้</Button> : null}
       </div>
+
+      <form className="mt-5 flex flex-col gap-2 sm:flex-row" method="GET" aria-label="ค้นหาบทสนทนาทั้งหมด">
+        {user ? <input type="hidden" name="user" value={user} /> : null}
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input name="q" type="search" defaultValue={q} maxLength={100} placeholder="ค้นหาชื่อแชตหรือข้อความจากทุกผู้ใช้..." className="pl-9" />
+        </div>
+        <Button type="submit">ค้นหา</Button>
+        {q ? <Button render={<Link href={user ? `/admin/conversations?user=${encodeURIComponent(user)}` : "/admin/conversations"} />} nativeButton={false} type="button" variant="outline">ล้าง</Button> : null}
+      </form>
+
+      {q ? <p className="mt-3 text-sm text-muted-foreground">ผลการค้นหา “{q}” · {conversations.length} บทสนทนา</p> : null}
 
       <section className="mt-6 overflow-hidden rounded-xl border border-border bg-card" aria-label="บทสนทนา">
         {conversations.length === 0 ? (

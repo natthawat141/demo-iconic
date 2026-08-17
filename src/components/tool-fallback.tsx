@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
+  ConversationChartTool,
   KnowledgeOverviewTool,
   KnowledgeSearchTool,
 } from "@/components/knowledge-tool-ui";
@@ -583,6 +584,9 @@ const ToolFallbackImpl: ToolCallMessagePartComponent = (props) => {
   }
   if (props.toolName === "showKnowledgeOverview") {
     return <KnowledgeOverviewTool status={props.status} result={props.result} />;
+  }
+  if (props.toolName === "renderChart") {
+    return <ConversationChartTool status={props.status} result={props.result} />;
   }
   return <GenericToolFallback {...props} />;
 };

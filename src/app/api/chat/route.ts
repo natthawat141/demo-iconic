@@ -373,6 +373,18 @@ export async function POST(request: Request) {
       inputSchema: z.object({}),
       execute: async () => getKnowledgeOverview(),
     }),
+    renderChart: tool({
+      description: "แสดงกราฟแท่งหรือกราฟเส้นจากตัวเลขที่ไม่ติดลบและปรากฏชัดในบทสนทนาหรือไฟล์ที่ผู้ใช้แนบ ใช้เมื่อผู้ใช้ขอกราฟจากข้อมูลนั้นโดยตรง ห้ามสร้างหรือเดาค่าตัวเลข",
+      inputSchema: z.object({
+        title: z.string().min(2).max(100),
+        kind: z.enum(["bar", "line"]),
+        points: z.array(z.object({
+          label: z.string().min(1).max(48),
+          value: z.number().finite().nonnegative(),
+        })).min(1).max(12),
+      }),
+      execute: async ({ title, kind, points }) => ({ title, kind, points }),
+    }),
   };
 
   const stream = createUIMessageStream({
@@ -383,7 +395,9 @@ export async function POST(request: Request) {
         ? { type: "tool" as const, toolName: "searchKnowledge" as const }
         : intent === "overview"
           ? { type: "tool" as const, toolName: "showKnowledgeOverview" as const }
-          : "none" as const;
+          : intent === "visualize"
+            ? "auto" as const
+            : "none" as const;
       const result = streamText({
         model: openrouter(chatModel),
         system: `${body.system ?? ""}
@@ -396,13 +410,14 @@ export async function POST(request: Request) {
 - ถ้ามี PDF แนบ ระบบได้สกัดข้อความจากเอกสารไว้ในข้อความประกอบแล้ว ใช้ข้อความนั้นตอบคำถามได้ แต่ถ้าเอกสารเป็นไฟล์สแกนที่ไม่มีข้อความ ให้บอกข้อจำกัดนี้อย่างตรงไปตรงมา
 - ถ้าคำถามกำกวมจนยังไม่รู้ว่าเกี่ยวกับ ICONIC หรือเป็นเรื่องทั่วไป ให้ถามกลับสั้นๆ หนึ่งคำถามแทนการเปิดคลังทุกอย่าง
 - เมื่อผู้ใช้ถามขั้นตอน นโยบาย แนวทางขาย การดูแลลูกค้า หรือข้อเท็จจริงของ ICONIC ให้เรียก searchKnowledge ก่อนตอบเสมอ
-- เมื่อผู้ใช้ขอกราฟ chart dashboard สถิติ หรือภาพรวม ให้เรียก showKnowledgeOverview
+- เมื่อผู้ใช้ขอภาพรวม, dashboard, สถิติ Knowledge หรือกราฟ Knowledge ให้เรียก showKnowledgeOverview
+- เมื่อผู้ใช้ขอกราฟจากตัวเลขในบทสนทนาหรือไฟล์ที่แนบ และมีตัวเลขชัดเจน ให้เรียก renderChart ด้วยค่าจากข้อมูลนั้นเท่านั้น; ถ้ายังไม่มีตัวเลขพอสร้างกราฟ ให้บอกว่าต้องการข้อมูลส่วนใดเพิ่ม และห้ามเดาค่า
 - ถ้า searchKnowledge พบข้อมูล ให้สรุปจากผลลัพธ์เท่านั้น ห้ามเพิ่มข้อเท็จจริงเอง
 - ถ้าไม่พบข้อมูลตรงๆ ให้พูดอย่างเป็นมนุษย์ว่าได้ลองเปิดคลังแล้วแต่ยังไม่มีคำตอบตรงคำถาม หากมี related ให้บอกว่าเป็น “เรื่องใกล้เคียง” และใช้เพียงชื่อหรือคำอธิบายสั้นๆ ห้ามนำมาแกล้งตอบแทน
 - ชวนผู้ใช้เพิ่มรายละเอียดหรือส่งต่อหัวหน้าทีมเมื่อเหมาะสม ห้ามแนะนำฝ่าย บุคคล ช่องทาง หรือนโยบายที่ไม่มีในผลลัพธ์ของ tool และไม่ต้องพูดคำเทคนิคอย่าง retrieval, vector หรือ threshold
 - ห้ามแนะนำผลิตภัณฑ์หรือกรมธรรม์เฉพาะบุคคลจากรูปหรือข้อมูลที่ไม่ผ่านการอนุมัติ ให้บอกข้อจำกัดและส่งต่อคนแทน
 - ห้ามพูดชื่อ tool หรือเล่ากระบวนการภายใน ตอบเหมือนผู้ช่วยที่หยิบเอกสารมาตรวจให้
-- ใช้ Markdown เมื่อช่วยให้อ่านง่าย เช่นหัวข้อสั้น รายการ หรือตาราง แต่ไม่ต้องจัดรูปแบบทุกคำตอบ
+- ใช้ Markdown เมื่อช่วยให้อ่านง่าย เช่นหัวข้อสั้น รายการ ตาราง และ code block; เมื่อต้องเปรียบเทียบหลายรายการ ให้ใช้ตาราง Markdown ได้
 - ไม่ต้องเขียนรายการอ้างอิงท้ายข้อความ เพราะระบบจะแสดง Source Cards ให้เอง`,
         messages: await convertToModelMessages(prepared.modelMessages),
         tools,

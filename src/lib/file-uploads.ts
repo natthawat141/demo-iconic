@@ -209,11 +209,15 @@ export function spreadsheetPrompt(fileName: string, analysis: ReturnType<typeof 
   const selected = analysis.selectedSheet;
   const columns = selected?.columns.slice(0, 8).map((column) => `${column.name} (${column.kind})`).join(", ") ?? "ไม่พบหัวตาราง";
   const chart = analysis.chart ? `${analysis.chart.kind} chart: ${analysis.chart.title}` : "ไม่มีกราฟที่สรุปอย่างปลอดภัย";
+  const chartPoints = analysis.chart
+    ? analysis.chart.points.map((point) => `${point.label}=${point.value}`).join(", ")
+    : "";
   return [
     `ผู้ใช้แนบไฟล์ ${fileName} แล้ว`,
     `มี ${analysis.sheets.length} ชีต; ชีตที่อ่าน: ${selected?.name ?? "-"} (${selected?.rowCount ?? 0} แถว)`,
     `คอลัมน์: ${columns}`,
     `ข้อเสนอกราฟ: ${chart}`,
+    chartPoints ? `ค่าที่ใช้สร้างกราฟ: ${chartPoints}` : "",
     "ช่วยอธิบายสิ่งที่อ่านได้อย่างกระชับ โดยบอกข้อจำกัดของข้อมูลถ้ามี และอย่าสรุปเกินกว่าข้อมูลนี้",
   ].join("\n");
 }
