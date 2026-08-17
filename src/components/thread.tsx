@@ -31,7 +31,6 @@ import {
   ActionBarPrimitive,
   AuiIf,
   type AssistantState,
-  BranchPickerPrimitive,
   ComposerPrimitive,
   ErrorPrimitive,
   groupPartByType,
@@ -46,8 +45,6 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CheckIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
   MicIcon,
@@ -164,7 +161,7 @@ const Composer: FC = () => (
     <div data-slot="aui_composer-shell" className="flex w-full flex-col gap-2 rounded-2xl bg-card p-3 shadow-sm ring-1 ring-input transition-[box-shadow] focus-within:ring-2 focus-within:ring-ring">
       <ComposerAttachments />
       <ComposerPrimitive.Input
-        placeholder="ถามน้องฟ้าจาก Knowledge ของทีม..."
+        placeholder="ถามอะไรก็ได้ หรือถามเรื่องงานของทีม..."
         className="aui-composer-input caret-primary placeholder:text-muted-foreground/80 max-h-32 min-h-14 w-full resize-none bg-transparent px-2.5 py-1 text-base outline-none"
         rows={1}
         autoFocus
@@ -213,9 +210,11 @@ const MessageError: FC = () => (
 
 const AssistantMessage: FC = () => {
   const { ToolFallback: ToolFallbackComponent = ToolFallback, ToolGroup, ReasoningGroup } = useContext(ThreadComponentsContext);
+  const hasRenderableContent = useAuiState((state) => state.message.content.some((part) => part.type !== "reasoning"));
+  if (!hasRenderableContent) return null;
   return (
-    <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="fade-in slide-in-from-bottom-1 animate-in relative rounded-xl bg-card p-4 ring-1 ring-border duration-150">
-      <div data-slot="aui_assistant-message-content" className="text-foreground leading-relaxed wrap-break-word">
+    <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="fade-in slide-in-from-bottom-1 animate-in relative py-1 duration-150">
+      <div data-slot="aui_assistant-message-content" className="max-w-[75ch] text-foreground leading-relaxed wrap-break-word">
         <MessagePrimitive.GroupedParts
           groupBy={groupPartByType({
             reasoning: ["group-chainOfThought", "group-reasoning"],
@@ -247,8 +246,7 @@ const AssistantMessage: FC = () => {
         </MessagePrimitive.GroupedParts>
         <MessageError />
       </div>
-      <div className="flex items-center justify-between pt-1.5">
-        <BranchPicker />
+      <div className="flex justify-end pt-1.5">
         <div className="flex items-center gap-1"><AnswerFeedback /><AssistantActionBar /></div>
       </div>
     </MessagePrimitive.Root>
@@ -305,7 +303,7 @@ const UserMessage: FC = () => (
     <div className="max-w-[85%] rounded-xl bg-muted px-4 py-2.5 text-sm leading-relaxed">
       <MessagePrimitive.Parts components={{ File: UserFilePart, Image: UserImagePart }} />
     </div>
-    <div className="flex items-center gap-2"><UserActionBar /><BranchPicker className="justify-end" /></div>
+    <div className="flex justify-end"><UserActionBar /></div>
   </MessagePrimitive.Root>
 );
 
@@ -325,12 +323,4 @@ const EditComposer: FC = () => (
       </div>
     </ComposerPrimitive.Root>
   </MessagePrimitive.Root>
-);
-
-const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({ className, ...rest }) => (
-  <BranchPickerPrimitive.Root hideWhenSingleBranch className={cn("aui-branch-picker-root text-muted-foreground inline-flex items-center gap-1 text-xs", className)} {...rest}>
-    <BranchPickerPrimitive.Previous render={<TooltipIconButton tooltip="Previous" className="size-6" />}><ChevronLeftIcon /></BranchPickerPrimitive.Previous>
-    <span><BranchPickerPrimitive.Number /> / <BranchPickerPrimitive.Count /></span>
-    <BranchPickerPrimitive.Next render={<TooltipIconButton tooltip="Next" className="size-6" />}><ChevronRightIcon /></BranchPickerPrimitive.Next>
-  </BranchPickerPrimitive.Root>
 );

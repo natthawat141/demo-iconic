@@ -469,6 +469,20 @@ export const activityStorage = {
     });
   },
 
+  async listUploadedFilesForUser(userId: string, limit = 100) {
+    return withStore(async () => {
+      await ensurePostgresReady();
+      const result = await getPostgresPool().query<DatabaseRow>(
+        "SELECT * FROM uploaded_files WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2",
+        [userId, limit],
+      );
+      return result.rows.map(mapFile);
+    }, () => {
+      ensureSqliteReady();
+      return (sqlite.prepare("SELECT * FROM uploaded_files WHERE user_id = ? ORDER BY created_at DESC LIMIT ?").all(userId, limit) as DatabaseRow[]).map(mapFile);
+    });
+  },
+
   async getUploadedFile(id: string) {
     return withStore(async () => {
       await ensurePostgresReady();

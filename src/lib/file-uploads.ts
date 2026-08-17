@@ -99,6 +99,13 @@ function getStorage() {
   return new Storage({ projectId: process.env.GOOGLE_CLOUD_PROJECT ?? "aione-zone1" });
 }
 
+export async function downloadFromDemoBucket(objectPath: string) {
+  const bucketName = process.env.GCS_UPLOAD_BUCKET?.trim();
+  if (!bucketName) throw new Error("ยังไม่ได้ตั้งค่า GCS_UPLOAD_BUCKET");
+  const [contents] = await getStorage().bucket(bucketName).file(objectPath).download();
+  return contents;
+}
+
 export async function analyzeUploadedSpreadsheet(file: File) {
   const extension = extensionFor(file);
   if (extension === ".csv") {

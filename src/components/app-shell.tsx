@@ -5,6 +5,7 @@ import {
   ChevronDown,
   Database,
   FileBarChart,
+  FolderOpen,
   LayoutDashboard,
   LibraryBig,
   ListTodo,
@@ -40,6 +41,7 @@ import { cn } from "@/lib/utils";
 
 const memberNavigation = [
   { href: "/", label: "ผู้ช่วยความรู้", icon: MessageSquareText },
+  { href: "/library", label: "คลังไฟล์", icon: FolderOpen },
 ];
 
 const adminNavigation = [
@@ -73,6 +75,7 @@ function getPageTitle(pathname: string) {
   if (pathname.startsWith("/knowledge/")) return "รายละเอียดความรู้";
   if (pathname.startsWith("/knowledge")) return "คลังความรู้";
   if (pathname.startsWith("/gaps")) return "คำถามที่รอคำตอบ";
+  if (pathname.startsWith("/library")) return "คลังไฟล์ของฉัน";
   return "ผู้ช่วยความรู้";
 }
 

@@ -7,6 +7,28 @@ import {
   uploadToDemoBucket,
 } from "@/lib/file-uploads";
 
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
+  const { userId, setCookie } = await getDemoUserForRequest(request);
+  const files = await activityStorage.listUploadedFilesForUser(userId, 150);
+  return withDemoSessionCookie(
+    Response.json({
+      files: files.map((file) => ({
+        id: file.id,
+        originalName: file.originalName,
+        mediaType: file.mediaType,
+        sizeBytes: file.sizeBytes,
+        kind: file.kind,
+        status: file.status,
+        analysis: file.analysis,
+        createdAt: file.createdAt.toISOString(),
+      })),
+    }),
+    setCookie,
+  );
+}
+
 export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get("file");

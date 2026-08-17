@@ -400,7 +400,7 @@ export async function POST(request: Request) {
         temperature: 0.35,
       });
 
-      const reader = result.toUIMessageStream().getReader();
+      const reader = result.toUIMessageStream({ sendReasoning: false }).getReader();
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
