@@ -26,6 +26,7 @@ import {
   searchKnowledge,
   type RetrievedKnowledge,
 } from "@/lib/knowledge";
+import { getTavilyApiKey, searchWeb, type WebSearchResult } from "@/lib/web-search";
 
 function latestQuestion(messages: UIMessage[]) {
   const latest = [...messages].reverse().find((message) => message.role === "user");
@@ -198,6 +199,21 @@ function writeSources(
   }
 }
 
+function writeWebSources(
+  writer: { write: (chunk: UIMessageChunk) => void },
+  sources: WebSearchResult[],
+) {
+  const unique = new Map(sources.map((source) => [source.url, source]));
+  for (const source of unique.values()) {
+    writer.write({
+      type: "source-url",
+      sourceId: `web-${crypto.randomUUID()}`,
+      url: source.url,
+      title: source.title,
+    });
+  }
+}
+
 async function safeModeResponse(
   messages: UIMessage[],
   question: string,
@@ -316,13 +332,14 @@ export async function POST(request: Request) {
       "openai/gpt-4.1-mini"
     : process.env.OPENROUTER_CHAT_MODEL?.trim() || "openai/gpt-4.1-mini";
   const openrouter = createOpenRouter({
-    apiKey: process.env.OPENROUTER_API_KEY,
+    apiKey: process.env.OPENROUTER_API_KEY!.trim(),
     headers: {
-      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001",
       "X-OpenRouter-Title": "ICONIC Knowledge Assistant Demo",
     },
   });
   const usedSources: RetrievedKnowledge[] = [];
+  const usedWebSources: WebSearchResult[] = [];
 
   const tools = {
     searchKnowledge: tool({
@@ -385,6 +402,38 @@ export async function POST(request: Request) {
       }),
       execute: async ({ title, kind, points }) => ({ title, kind, points }),
     }),
+    searchWeb: tool({
+      description:
+        "ค้นข้อมูลสาธารณะหรือข้อมูลปัจจุบันจากอินเทอร์เน็ต ใช้เมื่อผู้ใช้ขอค้นเว็บ ข่าว ราคา ข้อมูลล่าสุด หรือข้อเท็จจริงที่อาจเปลี่ยนแปลง ห้ามใช้กับข้อมูลภายในทีม ICONIC",
+      inputSchema: z.object({
+        query: z.string().min(2).max(400).describe("คำค้นที่มีบริบทพอให้ได้ผลลัพธ์ตรงคำถาม"),
+      }),
+      execute: async ({ query }) => {
+        if (!getTavilyApiKey()) {
+          return {
+            available: false,
+            message: "ยังไม่ได้เปิดการค้นเว็บในระบบนี้",
+            results: [],
+          };
+        }
+        try {
+          const results = await searchWeb(query);
+          usedWebSources.push(...results);
+          return {
+            available: true,
+            query,
+            resultCount: results.length,
+            results,
+          };
+        } catch {
+          return {
+            available: false,
+            message: "ค้นเว็บไม่สำเร็จในขณะนี้ กรุณาลองใหม่",
+            results: [],
+          };
+        }
+      },
+    }),
   };
 
   const stream = createUIMessageStream({
@@ -393,6 +442,8 @@ export async function POST(request: Request) {
       writeFileAnalyses(writer, prepared.uploadedFiles);
       const toolChoice = intent === "knowledge"
         ? { type: "tool" as const, toolName: "searchKnowledge" as const }
+        : intent === "web"
+          ? { type: "tool" as const, toolName: "searchWeb" as const }
         : intent === "overview"
           ? { type: "tool" as const, toolName: "showKnowledgeOverview" as const }
           : intent === "visualize"
@@ -408,6 +459,7 @@ export async function POST(request: Request) {
 - ถ้ามีรูปแนบ ให้ดูรูปและตอบคำถามเกี่ยวกับสิ่งที่มองเห็นได้โดยตรง ไม่ต้องเปิดคลังความรู้ เว้นแต่ผู้ใช้ถามว่าสิ่งในรูปสัมพันธ์กับขั้นตอนหรือนโยบายของ ICONIC อย่างไร
 - ถ้ามีไฟล์ตารางแนบ ระบบได้อ่านโครงสร้าง ตารางสรุป และกราฟที่สร้างได้ให้แล้ว ใช้เฉพาะข้อมูลที่ระบุในข้อความของผู้ใช้และบอกข้อจำกัดที่เกี่ยวข้อง
 - ถ้ามี PDF แนบ ระบบได้สกัดข้อความจากเอกสารไว้ในข้อความประกอบแล้ว ใช้ข้อความนั้นตอบคำถามได้ แต่ถ้าเอกสารเป็นไฟล์สแกนที่ไม่มีข้อความ ให้บอกข้อจำกัดนี้อย่างตรงไปตรงมา
+- ถ้าผู้ใช้ขอให้ค้นเว็บ หรือถามข้อมูลสาธารณะที่เปลี่ยนแปลงได้ เช่นข่าว ราคา รุ่นซอฟต์แวร์ หรือข้อมูลล่าสุด ให้เรียก searchWeb ก่อนตอบ ใช้เฉพาะผลค้นที่ได้ ระบุวันที่หรือความไม่แน่นอนเมื่อเกี่ยวข้อง และอย่าปะปนกับ Knowledge ภายในเว้นแต่ผู้ใช้ขอเปรียบเทียบ
 - ถ้าคำถามกำกวมจนยังไม่รู้ว่าเกี่ยวกับ ICONIC หรือเป็นเรื่องทั่วไป ให้ถามกลับสั้นๆ หนึ่งคำถามแทนการเปิดคลังทุกอย่าง
 - เมื่อผู้ใช้ถามขั้นตอน นโยบาย แนวทางขาย การดูแลลูกค้า หรือข้อเท็จจริงของ ICONIC ให้เรียก searchKnowledge ก่อนตอบเสมอ
 - เมื่อผู้ใช้ขอภาพรวม, dashboard, สถิติ Knowledge หรือกราฟ Knowledge ให้เรียก showKnowledgeOverview
@@ -418,10 +470,14 @@ export async function POST(request: Request) {
 - ห้ามแนะนำผลิตภัณฑ์หรือกรมธรรม์เฉพาะบุคคลจากรูปหรือข้อมูลที่ไม่ผ่านการอนุมัติ ให้บอกข้อจำกัดและส่งต่อคนแทน
 - ห้ามพูดชื่อ tool หรือเล่ากระบวนการภายใน ตอบเหมือนผู้ช่วยที่หยิบเอกสารมาตรวจให้
 - ใช้ Markdown เมื่อช่วยให้อ่านง่าย เช่นหัวข้อสั้น รายการ ตาราง และ code block; เมื่อต้องเปรียบเทียบหลายรายการ ให้ใช้ตาราง Markdown ได้
+- ถ้าผู้ใช้ขอโค้ดหรือสคริปต์ ให้เขียนตัวอย่างสั้นที่รันได้ พร้อมบอกวิธีใช้หนึ่งบรรทัด โดยเฉพาะเมื่อมี CSV/Excel ให้ยึดชื่อคอลัมน์ที่ระบบอ่านได้จริง ห้ามอ้างว่าได้รันโค้ดแล้วถ้าไม่ได้รัน
 - ไม่ต้องเขียนรายการอ้างอิงท้ายข้อความ เพราะระบบจะแสดง Source Cards ให้เอง`,
         messages: await convertToModelMessages(prepared.modelMessages),
         tools,
         toolChoice,
+        prepareStep: ({ stepNumber }) => stepNumber > 0
+          ? { toolChoice: "none" as const }
+          : undefined,
         stopWhen: stepCountIs(3),
         temperature: 0.35,
       });
@@ -449,6 +505,7 @@ export async function POST(request: Request) {
         console.error("Model usage metric failed", error);
       }
       writeSources(writer, usedSources);
+      writeWebSources(writer, usedWebSources);
     },
     onError: (error) => {
       console.error("Chat stream failed", error);

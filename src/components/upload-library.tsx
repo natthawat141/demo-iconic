@@ -152,6 +152,10 @@ export function UploadLibrary() {
       <Button type="button" variant="outline" size="sm" onClick={() => void loadFiles()} disabled={loading}><RefreshCw className={loading ? "size-3.5 animate-spin" : "size-3.5"} /> รีเฟรช</Button>
     </header>
     {error ? <p role="alert" className="mt-6 rounded-lg border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
+    <section className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/25 px-4 py-3 sm:flex-row sm:items-center sm:justify-between" aria-label="ไฟล์ข้อมูลตัวอย่าง">
+      <div><p className="text-sm font-medium">ลองวิเคราะห์ข้อมูลตัวอย่าง</p><p className="mt-0.5 text-xs text-muted-foreground">ดาวน์โหลดแล้วแนบในแชตเพื่อดูสรุป ตาราง กราฟ และขอสคริปต์ต่อได้</p></div>
+      <div className="flex shrink-0 flex-wrap gap-2"><a href="/demo-data/iconic-sales-funnel.csv" download><Button type="button" variant="outline" size="sm"><Download className="size-3.5" /> Sales funnel</Button></a><a href="/demo-data/iconic-client-followup.csv" download><Button type="button" variant="outline" size="sm"><Download className="size-3.5" /> Client follow-up</Button></a></div>
+    </section>
     {files === null && !error ? <div className="mt-6 h-48 animate-pulse rounded-xl bg-muted" aria-label="กำลังโหลดคลังไฟล์" /> : null}
     {files?.length === 0 ? <section className="mt-12 text-center"><ImageIcon className="mx-auto size-7 text-muted-foreground" /><h2 className="mt-3 text-base font-semibold">ยังไม่มีไฟล์ในคลัง</h2><p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">แนบรูป, Excel หรือ PDF จากช่องแชต แล้วไฟล์จะปรากฏที่นี่</p></section> : null}
     {images.length > 0 ? <section className="mt-7" aria-labelledby="library-images-title">

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Bot,
   ChevronDown,
   Database,
   FileBarChart,
@@ -10,6 +9,7 @@ import {
   LayoutDashboard,
   LibraryBig,
   ListTodo,
+  LoaderCircle,
   LogOut,
   Menu,
   MessageSquareText,
@@ -173,19 +173,26 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
   const router = useRouter();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const requestRef = useRef(0);
+  const loadedOnceRef = useRef(false);
 
   const refreshHistory = useCallback(async () => {
     const requestId = ++requestRef.current;
-    setLoading(true);
+    if (loadedOnceRef.current) setSearching(true);
+    else setLoading(true);
     try {
       const items = await requestConversationHistory(query.trim());
       if (requestId === requestRef.current) setConversations(items);
     } catch {
       // The chat itself remains available even if the history request is transiently unavailable.
     } finally {
-      if (requestId === requestRef.current) setLoading(false);
+      if (requestId === requestRef.current) {
+        loadedOnceRef.current = true;
+        setLoading(false);
+        setSearching(false);
+      }
     }
   }, [query]);
 
@@ -234,7 +241,7 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
           aria-label="ค้นหาประวัติแชตของฉัน"
           className="h-8 bg-sidebar pl-7 pr-7 text-xs"
         />
-        {query ? <Button type="button" variant="ghost" size="icon-sm" onClick={() => setQuery("")} className="absolute right-1 top-1/2 -translate-y-1/2" aria-label="ล้างคำค้น"><X className="size-3" /></Button> : null}
+        {searching ? <LoaderCircle className="pointer-events-none absolute right-3 top-1/2 size-3 -translate-y-1/2 animate-spin text-muted-foreground" aria-hidden="true" /> : query ? <Button type="button" variant="ghost" size="icon-sm" onClick={() => setQuery("")} className="absolute right-1 top-1/2 -translate-y-1/2" aria-label="ล้างคำค้น"><X className="size-3" /></Button> : null}
       </div>
       <div className="space-y-0.5" aria-live="polite" aria-busy={loading}>
         {loading ? (
@@ -338,8 +345,8 @@ export function AppShell({
           className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/25"
           onClick={() => setMenuOpen(false)}
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[0_4px_8px_oklch(0.45_0.16_255/0.18)]">
-            <Bot className="size-[1.05rem]" aria-hidden="true" />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary font-mono text-[11px] font-semibold text-primary-foreground">
+            NF
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold leading-tight">Nong Fah</span>

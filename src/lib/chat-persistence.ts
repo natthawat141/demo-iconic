@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { UIMessage } from "ai";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 import { activityStorage } from "@/db/activity-storage";
 import type { AnswerSource, ConversationMessage, StoredAttachment } from "@/db/activity-types";
@@ -71,7 +71,12 @@ export type ChatPersistence = {
 export async function getDemoUserForRequest(request: Request) {
   const { userId: clerkUserId } = await auth();
   if (clerkUserId) {
-    await activityStorage.ensureUser(clerkUserId);
+    const profile = await currentUser();
+    const displayName = profile?.fullName?.trim() ||
+      profile?.primaryEmailAddress?.emailAddress ||
+      profile?.username ||
+      clerkUserId;
+    await activityStorage.ensureUser(clerkUserId, displayName);
     return { userId: clerkUserId, setCookie: null };
   }
 

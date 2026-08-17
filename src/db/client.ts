@@ -4,17 +4,21 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { count } from "drizzle-orm";
 import { mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import * as schema from "./schema";
 import { seedKnowledge, seedKnowledgeGaps } from "./seed-data";
 
-const dataDirectory = path.join(process.cwd(), "data");
+const databasePath = process.env.DEMO_DB_PATH ?? (
+  process.env.NODE_ENV === "production"
+    ? path.join(tmpdir(), "iconic-demo.sqlite")
+    : path.join(process.cwd(), "data", "demo.sqlite")
+);
+const dataDirectory = path.dirname(databasePath);
 mkdirSync(dataDirectory, { recursive: true });
 
-export const sqlite = new Database(
-  process.env.DEMO_DB_PATH ?? path.join(dataDirectory, "demo.sqlite"),
-);
+export const sqlite = new Database(databasePath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 

@@ -37,4 +37,16 @@ describe("chat intent routing", () => {
   it("routes an explicit Knowledge chart to the overview path", () => {
     expect(classifyChatIntent("ขอกราฟภาพรวม Knowledge")).toBe("overview");
   });
+
+  it.each([
+    "ช่วยค้นเว็บว่า Next.js รุ่นล่าสุดคืออะไร",
+    "ข่าวเทคโนโลยีล่าสุดวันนี้",
+    "search the web for current React release",
+  ])("routes fresh public information to Tavily: %s", (message) => {
+    expect(classifyChatIntent(message)).toBe("web");
+  });
+
+  it("does not send ordinary internal questions to the public web", () => {
+    expect(classifyChatIntent("แนวทางติดตามลูกค้าของทีมเรา")).toBe("knowledge");
+  });
 });

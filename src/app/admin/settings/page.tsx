@@ -1,11 +1,13 @@
-import { Bot, Database, KeyRound, ShieldCheck } from "lucide-react";
+import { Cpu, Database, KeyRound, ShieldCheck } from "lucide-react";
+
+import { isPostgresConfigured } from "@/db/postgres-config";
 
 export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
   const rows = [
     {
-      icon: Bot,
+      icon: Cpu,
       label: "Chat model",
       value: process.env.OPENROUTER_CHAT_MODEL ?? "openai/gpt-4.1-mini",
       detail: "โหลดจาก OPENROUTER_CHAT_MODEL",
@@ -19,8 +21,8 @@ export default function SettingsPage() {
     {
       icon: Database,
       label: "Database",
-      value: process.env.MYSQL_URL ? "Oracle MySQL" : "SQLite local demo",
-      detail: process.env.MYSQL_URL ? "เชื่อมต่อผ่าน MYSQL_URL" : "เพิ่ม MYSQL_URL เมื่อต้องการย้ายข้อมูลขึ้น Oracle",
+      value: isPostgresConfigured() ? "GCP Cloud SQL · PostgreSQL" : process.env.MYSQL_URL ? "Oracle MySQL" : "SQLite local demo",
+      detail: isPostgresConfigured() ? "PostgreSQL + pgvector เป็น system of record" : process.env.MYSQL_URL ? "เชื่อมต่อผ่าน MYSQL_URL" : "ใช้ฐานในเครื่องสำหรับ development",
     },
     {
       icon: KeyRound,

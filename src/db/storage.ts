@@ -2,9 +2,10 @@ import "server-only";
 
 import { mysqlStorage } from "./mysql-storage";
 import { postgresStorage } from "./postgres-storage";
+import { isPostgresConfigured } from "./postgres-config";
 import { sqliteStorage } from "./sqlite-storage";
 
-export const storage = process.env.POSTGRES_URL?.trim()
+export const storage = isPostgresConfigured()
   ? postgresStorage
   : process.env.MYSQL_URL?.trim()
     ? mysqlStorage

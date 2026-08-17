@@ -1,71 +1,91 @@
-# Nong Fah — ICONIC Knowledge Assistant Demo
+# Nong Fah — ICONIC Knowledge Assistant
 
-เดโมผู้ช่วยความรู้ภายในที่แสดงวงจร Knowledge Management ครบตั้งแต่ถาม–ตอบด้วยแหล่งอ้างอิง ไปจนถึงบันทึกคำถามที่ตอบไม่ได้เป็น Knowledge Gap แล้วแปลงเป็นความรู้ใหม่เพื่ออนุมัติและใช้ซ้ำ
+เดโมผู้ช่วย AI ภาษาไทยสำหรับทีม ICONIC: คุยเรื่องทั่วไปได้, ค้นข้อมูลปัจจุบันจากเว็บ, ตอบข้อมูลภายในจาก Approved Knowledge พร้อมแหล่งอ้างอิง, วิเคราะห์รูป/PDF/CSV/Excel และเก็บประวัติแชต/ไฟล์แยกตามผู้ใช้ให้ Admin ตรวจได้
 
-## สิ่งที่เดโมทำได้
+ข้อมูล Knowledge และไฟล์ตัวอย่างทั้งหมดเป็นข้อมูลสมมติสำหรับเดโม ไม่ใช่นโยบายหรือข้อมูลลูกค้าจริง
 
-- แชตภาษาไทยบน `assistant-ui` พร้อม model-driven Knowledge tools, Markdown, charts และ Source Cards
-- โหมดมืด/สว่าง พร้อม workspace แยก Team member และ Admin
-- ใช้เฉพาะ Knowledge สถานะ `Approved` ในการตอบ
-- สร้าง แก้ไข อนุมัติ เก็บถาวร และกำหนด owner/source/review date
-- รวมคำถามที่ตอบไม่ได้เป็น Knowledge Gaps พร้อมจำนวนครั้งที่ถูกถาม
-- ส่งต่อหัวหน้าทีม แปลง Gap เป็น Draft Knowledge แล้วอนุมัติเพื่อใช้ตอบรอบถัดไป
-- รีเซ็ตข้อมูลกลับสู่ sales-demo scenario ได้ในคลิกเดียว
+Demo บน Cloud Run: [iconic-knowledge-assistant](https://iconic-knowledge-assistant-50194055876.asia-southeast1.run.app)
 
-ข้อมูล seed ทั้งหมดเป็นข้อมูลสมมติสำหรับเดโม ไม่ใช่นโยบายจริงของ ICONIC
+## สิ่งที่ทดลองได้
 
-## เริ่มใช้งาน
+- แชตแบบ `assistant-ui` รองรับ Markdown, code blocks, ตาราง, Source Cards และกราฟ
+- แยก intent: สนทนาทั่วไป, Knowledge ภายใน, คำถามกำกวม, ข้อมูลล่าสุดจากเว็บ และการวิเคราะห์ไฟล์
+- Tavily web search สำหรับข่าว ราคา รุ่นซอฟต์แวร์ และข้อมูลสาธารณะที่เปลี่ยนแปลงได้
+- OpenRouter สำหรับ chat/vision/embedding โดยอ่านชื่อโมเดลจาก environment
+- อัปโหลดรูป, PDF, CSV, XLS/XLSX และ DOCX ไป Google Cloud Storage แบบ private
+- อ่านข้อความ PDF, สรุปคอลัมน์/สถิติ/ตัวอย่างแถว และสร้าง bar/line chart จาก CSV/Excel
+- เขียน Markdown, โค้ดหรือสคริปต์สั้นจากชื่อคอลัมน์ที่อ่านได้จริง
+- ฟังคำตอบภาษาไทย/อังกฤษผ่าน Web Speech API ของเบราว์เซอร์
+- Clerk sign in/sign up และประวัติแชต/ไฟล์/usage แยกตาม user ID
+- Admin workspace: ผู้ใช้, บทสนทนา, ไฟล์, token/model usage, Knowledge lifecycle, gaps และ Admin AI
+- Hybrid Knowledge retrieval: OpenRouter embeddings + lexical Thai matching; PostgreSQL ใช้ pgvector และ HNSW candidate search
+
+## เริ่มใช้งานบนเครื่อง
 
 ต้องมี Node.js 20+ และ pnpm
 
-```bash
+```powershell
 pnpm install
-pnpm db:seed
-pnpm dev
+pnpm dev --port 3001
 ```
 
-เปิด [http://localhost:3000](http://localhost:3000)
+เปิด [http://localhost:3001](http://localhost:3001) หากไม่ต่อ PostgreSQL ระบบจะใช้ `data/demo.sqlite` อัตโนมัติ
 
-## OpenRouter
+ไฟล์ CSV ตัวอย่างอยู่ที่ `public/demo-data/` และดาวน์โหลดได้จากหน้า `/library`
 
-คัดลอก `.env.example` เป็น `.env.local` แล้วใส่ API key ผ่านไฟล์ในเครื่อง:
+## Environment
+
+คัดลอก `.env.example` เป็น `.env.local` แล้วใส่ค่าจริงเฉพาะในเครื่อง ห้าม commit secrets
 
 ```dotenv
-OPENROUTER_API_KEY=your-key
-OPENROUTER_CHAT_MODEL=openai/gpt-4.1-mini
+OPENROUTER_API_KEY=
+OPENROUTER_CHAT_MODEL=google/gemini-3.7-flash
+OPENROUTER_VISION_MODEL=
 OPENROUTER_EMBEDDING_MODEL=openai/text-embedding-3-small
-DEMO_SAFE_MODE=false
+TAVILY_API_KEY=
+
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+
+GCS_UPLOAD_BUCKET=aione-zone1-iconic-demo-50194055876
+GOOGLE_CLOUD_PROJECT=aione-zone1
 ```
 
-หากไม่มี key หรือ `DEMO_SAFE_MODE=true` ระบบยังทำงานได้ด้วยคำตอบจาก Knowledge ที่ค้นพบและ local hash embeddings แบบ deterministic เหมาะสำหรับการพรีเซนต์โดยไม่พึ่งอินเทอร์เน็ต
+`Tavily_api_key` ยังรองรับชั่วคราวเพื่อไม่ทำลาย env เดิม แต่ชื่อมาตรฐานที่ควรใช้คือ `TAVILY_API_KEY`
 
 ## Database
 
-Production ใช้ GCP Cloud SQL for PostgreSQL + pgvector ผ่าน `POSTGRES_URL` ส่วน local demo ยัง fallback เป็น SQLite ที่ `data/demo.sqlite` ได้ทันที:
+Local ผ่าน Cloud SQL Auth Proxy ใช้ URL เดียวได้:
 
 ```dotenv
 POSTGRES_URL=postgresql://iconic_app:password@127.0.0.1:5433/iconic_knowledge
 ```
 
-Oracle MySQL ยังรองรับเป็น compatibility option:
+Cloud Run ใช้ Cloud SQL Unix socket และ inject password จาก Secret Manager แยกจาก image:
 
 ```dotenv
-MYSQL_URL=mysql://user:password@host:3306/iconic_knowledge?ssl=true
+POSTGRES_HOST=/cloudsql/aione-zone1:asia-southeast1:iconic-knowledge-pg
+POSTGRES_PORT=5432
+POSTGRES_DB=iconic_knowledge
+POSTGRES_USER=iconic_app
+POSTGRES_PASSWORD=<Secret Manager>
 ```
 
-ระบบจะสร้างตารางและ seed ข้อมูลเริ่มต้นให้อัตโนมัติเมื่อเชื่อมต่อครั้งแรก PostgreSQL เก็บ embeddings ด้วยชนิด `vector`; MySQL/SQLite เก็บเป็น JSON และยังคำนวณ similarity ในแอป
-
-รายละเอียด resource, Secret Manager, วิธีเปิด Cloud SQL Auth Proxy และ production checklist อยู่ที่ [docs/GCP_CLOUD_SQL.md](./docs/GCP_CLOUD_SQL.md)
+ระบบเลือก storage ตามลำดับ PostgreSQL → optional MySQL compatibility → local SQLite รายละเอียด resource และวิธีตรวจฐานอยู่ที่ [docs/GCP_CLOUD_SQL.md](./docs/GCP_CLOUD_SQL.md)
 
 ## ตรวจคุณภาพ
 
-```bash
+```powershell
 pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
 ```
 
-SQLite ถูกเก็บที่ `data/demo.sqlite` และไม่ถูก commitขึ้น Git ใช้ `pnpm db:seed` หรือปุ่ม “รีเซ็ตเดโม” เพื่อคืนข้อมูลเริ่มต้น
+Health endpoint: `/api/health`
 
-อ่านขอบเขตและ acceptance criteria ที่ [DEMO_SPEC.md](./DEMO_SPEC.md)
+## Deployment
+
+มี `Dockerfile` แบบ Next.js standalone สำหรับ Cloud Run และไฟล์ ignore ที่ไม่ส่ง `.env`, SQLite, build cache หรือ dependencies เข้า Cloud Build ดูขั้นตอนและ IAM ที่ [docs/GCP_CLOUD_RUN.md](./docs/GCP_CLOUD_RUN.md)
+
+ขอบเขต UX อยู่ที่ [docs/UX_IMPLEMENTATION_PLAN.md](./docs/UX_IMPLEMENTATION_PLAN.md) และรายการที่เลื่อนไป production อยู่ที่ [docs/PRODUCTION_DEFERRED.md](./docs/PRODUCTION_DEFERRED.md)

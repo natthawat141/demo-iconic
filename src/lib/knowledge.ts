@@ -4,6 +4,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { embed, embedMany } from "ai";
 
 import type { KnowledgeItem } from "@/db/schema";
+import { searchPostgresChunks } from "@/db/postgres-storage";
 import { storage } from "@/db/storage";
 
 const LOCAL_MODEL = "local-hash-v1";
@@ -147,7 +148,7 @@ async function createEmbeddings(values: string[], modelKey: string) {
 
   try {
     const openrouter = createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY,
+      apiKey: process.env.OPENROUTER_API_KEY!.trim(),
     });
     const { embeddings } = await embedMany({
       model: openrouter.textEmbeddingModel(
@@ -206,7 +207,7 @@ async function embedQuestion(question: string, modelKey: string) {
   if (modelKey === LOCAL_MODEL) return localEmbedding(question);
   try {
     const openrouter = createOpenRouter({
-      apiKey: process.env.OPENROUTER_API_KEY,
+      apiKey: process.env.OPENROUTER_API_KEY!.trim(),
     });
     const { embedding } = await embed({
       model: openrouter.textEmbeddingModel(
@@ -234,12 +235,16 @@ function keywordBonus(question: string, item: KnowledgeItem) {
 export async function searchKnowledge(question: string): Promise<KnowledgeSearchResult> {
   let modelKey = await rebuildKnowledgeIndex();
   let queryVector = await embedQuestion(question, modelKey);
-  let chunks = await storage.listChunks();
+  let chunks = storage.provider === "postgres"
+    ? await searchPostgresChunks(queryVector, modelKey)
+    : await storage.listChunks();
 
   if (chunks.length > 0 && chunks[0].embedding.length !== queryVector.length) {
     modelKey = await rebuildKnowledgeIndex(true);
     queryVector = await embedQuestion(question, modelKey);
-    chunks = await storage.listChunks();
+    chunks = storage.provider === "postgres"
+      ? await searchPostgresChunks(queryVector, modelKey)
+      : await storage.listChunks();
   }
 
   const approvedItems = await storage.listApprovedKnowledge();

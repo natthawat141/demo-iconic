@@ -3,6 +3,7 @@ import "server-only";
 import { Pool } from "pg";
 
 import { sqlite } from "./client";
+import { isPostgresConfigured, postgresPoolConfig } from "./postgres-config";
 import type {
   AnswerSource,
   AnswerFeedback,
@@ -52,6 +53,22 @@ function mapConversation(row: DatabaseRow): Conversation {
   };
 }
 
+function rankConversationSearch(items: Conversation[], query: string) {
+  if (!query) return items;
+  const needle = query.toLocaleLowerCase("th");
+  const rank = (title: string) => {
+    const normalized = title.toLocaleLowerCase("th");
+    if (normalized === needle) return 0;
+    if (normalized.startsWith(needle)) return 1;
+    if (normalized.includes(needle)) return 2;
+    return 3;
+  };
+  return items.sort((left, right) => {
+    const relevance = rank(left.title) - rank(right.title);
+    return relevance || right.updatedAt.getTime() - left.updatedAt.getTime();
+  });
+}
+
 function mapMessage(row: DatabaseRow): ConversationMessage {
   return {
     id: String(row.id),
@@ -85,14 +102,11 @@ let sqliteReady = false;
 
 function getPostgresPool() {
   if (postgresPool) return postgresPool;
-  const connectionString = process.env.POSTGRES_URL?.trim();
-  if (!connectionString) throw new Error("POSTGRES_URL is not configured");
-  postgresPool = new Pool({
-    connectionString,
+  postgresPool = new Pool(postgresPoolConfig({
     max: 8,
     connectionTimeoutMillis: 6_000,
     idleTimeoutMillis: 30_000,
-  });
+  }));
   return postgresPool;
 }
 
@@ -257,7 +271,7 @@ function ensureSqliteReady() {
 }
 
 async function withStore<T>(postgres: () => Promise<T>, local: () => T | Promise<T>) {
-  if (!process.env.POSTGRES_URL?.trim()) return local();
+  if (!isPostgresConfigured()) return local();
   try {
     return await postgres();
   } catch (error) {
@@ -278,7 +292,9 @@ export const activityStorage = {
       const result = await getPostgresPool().query<DatabaseRow>(
         `INSERT INTO demo_users (id, display_name, created_at, last_seen_at)
          VALUES ($1, $2, $3, $3)
-         ON CONFLICT (id) DO UPDATE SET last_seen_at = EXCLUDED.last_seen_at
+         ON CONFLICT (id) DO UPDATE SET
+           display_name = EXCLUDED.display_name,
+           last_seen_at = EXCLUDED.last_seen_at
          RETURNING *`,
         [id, displayName, now],
       );
@@ -288,7 +304,9 @@ export const activityStorage = {
       sqlite.prepare(`
         INSERT INTO demo_users (id, display_name, created_at, last_seen_at)
         VALUES (?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET last_seen_at = excluded.last_seen_at
+        ON CONFLICT(id) DO UPDATE SET
+          display_name = excluded.display_name,
+          last_seen_at = excluded.last_seen_at
       `).run(id, displayName, now.getTime(), now.getTime());
       return mapUser(sqlite.prepare("SELECT * FROM demo_users WHERE id = ?").get(id) as DatabaseRow);
     });
@@ -620,7 +638,7 @@ export const activityStorage = {
               )
               ORDER BY updated_at DESC LIMIT $2`, [pattern, limit])
             : await getPostgresPool().query<DatabaseRow>("SELECT * FROM conversations ORDER BY updated_at DESC LIMIT $1", [limit]);
-      return result.rows.map(mapConversation);
+      return rankConversationSearch(result.rows.map(mapConversation), query);
     }, () => {
       ensureSqliteReady();
       const rows = options.userId && query
@@ -644,7 +662,7 @@ export const activityStorage = {
               )
               ORDER BY updated_at DESC LIMIT ?`).all(pattern, pattern, limit)
             : sqlite.prepare("SELECT * FROM conversations ORDER BY updated_at DESC LIMIT ?").all(limit);
-      return (rows as DatabaseRow[]).map(mapConversation);
+      return rankConversationSearch((rows as DatabaseRow[]).map(mapConversation), query);
     });
   },
 

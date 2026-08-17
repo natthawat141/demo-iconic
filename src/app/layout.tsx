@@ -5,6 +5,7 @@ import { Noto_Sans_Thai } from "next/font/google";
 
 import { AppShell } from "@/components/app-shell";
 import { ThemeProvider } from "@/components/theme-provider";
+import { isPostgresConfigured } from "@/db/postgres-config";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     process.env.OPENROUTER_CHAT_MODEL?.trim() || "openai/gpt-4.1-mini";
   const liveModel = Boolean(process.env.OPENROUTER_API_KEY) &&
     process.env.DEMO_SAFE_MODE !== "true";
-  const databaseLabel = process.env.POSTGRES_URL
+  const databaseLabel = isPostgresConfigured()
     ? "GCP Cloud SQL · PostgreSQL"
     : process.env.MYSQL_URL
       ? "Oracle MySQL · Remote"

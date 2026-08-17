@@ -73,7 +73,7 @@ Service account ของ VM ต้องมีอย่างน้อย:
 2. `MYSQL_URL` — Oracle MySQL compatibility
 3. ไม่มีทั้งสองค่า — SQLite local demo
 
-เมื่อ PostgreSQL เชื่อมต่อครั้งแรก แอปจะสร้างตารางและ seed demo data ให้อัตโนมัติ Embedding เก็บในคอลัมน์ชนิด `vector` ของ pgvector
+เมื่อ PostgreSQL เชื่อมต่อครั้งแรก แอปจะสร้างตารางและ seed demo data ให้อัตโนมัติ Embedding เก็บในคอลัมน์ชนิด `vector` ของ pgvector ปัจจุบันใช้ `openai/text-embedding-3-small` ขนาด 1,536 มิติ และมี HNSW cosine index ชื่อ `idx_chunks_embedding_hnsw`; หากเปลี่ยนโมเดล ระบบ rebuild chunks และ index ตาม dimension ใหม่
 
 ไฟล์รูป, Excel, CSV, PDF และ DOCX ของเดโมเก็บ binary ใน Cloud Storage bucket ข้างต้น; PostgreSQL เก็บเฉพาะ metadata, user/conversation ID และผลวิเคราะห์ตารางที่ serialize ได้
 
@@ -100,5 +100,5 @@ Remove-Item Env:PGPASSWORD
 - ทดสอบ restore จาก backup ไป instance ชั่วคราว
 - เปลี่ยนเป็น Regional HA หากลูกค้าต้องการ SLA
 - จำกัด Secret Manager IAM ให้ service account ของแอปเท่านั้น
-- ตรึง embedding model และ dimension ก่อนสร้าง HNSW index
+- ทดสอบ recall/latency ก่อนเปลี่ยน embedding model หรือ HNSW parameters
 - เปิด Query Insights/alerts สำหรับ CPU, memory, storage และ connection count

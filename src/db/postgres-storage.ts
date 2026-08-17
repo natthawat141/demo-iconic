@@ -1,5 +1,6 @@
 import { Pool, type PoolClient, type QueryResult } from "pg";
 
+import { postgresPoolConfig } from "./postgres-config";
 import { seedKnowledge, seedKnowledgeGaps } from "./seed-data";
 import type {
   KnowledgeChunk,
@@ -9,7 +10,7 @@ import type {
   NewKnowledgeGap,
   NewKnowledgeItem,
 } from "./schema";
-import type { GapUpdate, KnowledgeStorage, KnowledgeUpdate } from "./storage-types";
+import type { KnowledgeStorage } from "./storage-types";
 
 type DatabaseClient = Pool | PoolClient;
 type DatabaseRow = Record<string, unknown>;
@@ -19,9 +20,7 @@ let ready: Promise<void> | null = null;
 
 function getPool() {
   if (pool) return pool;
-  const connectionString = process.env.POSTGRES_URL?.trim();
-  if (!connectionString) throw new Error("POSTGRES_URL is not configured");
-  pool = new Pool({ connectionString, max: 10 });
+  pool = new Pool(postgresPoolConfig({ max: 10 }));
   return pool;
 }
 
@@ -187,6 +186,13 @@ async function initialize() {
   await database.query("CREATE INDEX IF NOT EXISTS idx_gaps_status ON knowledge_gaps(status)");
   await database.query("CREATE INDEX IF NOT EXISTS idx_gaps_last_asked ON knowledge_gaps(last_asked_at DESC)");
 
+  const dimensions = await database.query<{ dimensions: number }>(
+    "SELECT DISTINCT vector_dims(embedding)::int AS dimensions FROM knowledge_chunks LIMIT 2",
+  );
+  if (dimensions.rows.length === 1) {
+    await createVectorIndex(database, dimensions.rows[0]!.dimensions);
+  }
+
   const result = await database.query<{ count: string }>(
     "SELECT COUNT(*) AS count FROM knowledge_items",
   );
@@ -204,6 +210,14 @@ async function initialize() {
       client.release();
     }
   }
+}
+
+async function createVectorIndex(database: DatabaseClient, dimensions: number) {
+  if (!Number.isInteger(dimensions) || dimensions < 1 || dimensions > 2_000) return;
+  await database.query(
+    `CREATE INDEX IF NOT EXISTS idx_chunks_embedding_hnsw
+     ON knowledge_chunks USING hnsw ((embedding::vector(${dimensions})) vector_cosine_ops)`,
+  );
 }
 
 async function ensureReady() {
@@ -287,6 +301,7 @@ export const postgresStorage: KnowledgeStorage = {
     const client = await getPool().connect();
     try {
       await client.query("BEGIN");
+      await client.query("DROP INDEX IF EXISTS idx_chunks_embedding_hnsw");
       await client.query("DELETE FROM knowledge_chunks");
       for (const chunk of chunks) {
         await client.query(
@@ -304,6 +319,11 @@ export const postgresStorage: KnowledgeStorage = {
           ],
         );
       }
+      const dimensions = chunks[0]?.embedding.length ?? 0;
+      if (chunks.some((chunk) => chunk.embedding.length !== dimensions)) {
+        throw new Error("Knowledge embeddings must use one dimension per index build");
+      }
+      await createVectorIndex(client, dimensions);
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");
@@ -418,3 +438,25 @@ export const postgresStorage: KnowledgeStorage = {
     }
   },
 };
+
+export async function searchPostgresChunks(
+  queryEmbedding: number[],
+  embeddingModel: string,
+  limit = 80,
+) {
+  await ensureReady();
+  const dimensions = queryEmbedding.length;
+  if (!Number.isInteger(dimensions) || dimensions < 1 || dimensions > 2_000) {
+    return postgresStorage.listChunks();
+  }
+  const normalizedLimit = Math.max(1, Math.min(Math.trunc(limit), 200));
+  const result = await getPool().query(
+    `SELECT *, embedding::text AS embedding
+     FROM knowledge_chunks
+     WHERE embedding_model = $2 AND vector_dims(embedding) = $3
+     ORDER BY embedding::vector(${dimensions}) <=> $1::vector(${dimensions})
+     LIMIT $4`,
+    [JSON.stringify(queryEmbedding), embeddingModel, dimensions, normalizedLimit],
+  );
+  return result.rows.map(mapChunk);
+}

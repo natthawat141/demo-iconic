@@ -16,11 +16,12 @@ import {
   useAISDKRuntime,
 } from "@assistant-ui/react-ai-sdk";
 import { useChat } from "@ai-sdk/react";
-import { lastAssistantMessageIsCompleteWithToolCalls, type UIMessage } from "ai";
-import { BarChart3, CheckCircle2, Send, ShieldAlert } from "lucide-react";
+import type { UIMessage } from "ai";
+import { CheckCircle2, Send, ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Thread } from "@/components/thread";
+import { TabularAnalysisCard } from "@/components/tabular-analysis-card";
 import { Button } from "@/components/ui/button";
 import type { KnowledgeStateData, TabularAnalysisData } from "@/lib/demo-types";
 
@@ -167,43 +168,6 @@ function KnowledgeDataRenderer() {
   return null;
 }
 
-function TabularAnalysisCard({ data }: DataMessagePartProps<TabularAnalysisData>) {
-  const analysis = data.analysis as TabularAnalysisData["analysis"];
-  const chart = analysis.chart;
-  const maxValue = Math.max(...(chart?.points.map((point) => point.value) ?? [1]), 1);
-  return (
-    <section className="my-3 overflow-hidden rounded-xl border border-border bg-muted/35" aria-label={`สรุปไฟล์ ${data.filename}`}>
-      <div className="flex items-start gap-3 border-b border-border bg-card px-4 py-3">
-        <span className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary"><BarChart3 className="size-4" /></span>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">วิเคราะห์ {data.filename}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{analysis.selectedSheet.name} · {analysis.selectedSheet.rowCount.toLocaleString()} แถว · {analysis.selectedSheet.columnCount} คอลัมน์</p>
-        </div>
-      </div>
-      {chart ? (
-        <div className="p-4">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <p className="text-sm font-medium">{chart.title}</p>
-            <p className="text-[11px] text-muted-foreground">สรุปผลรวมจากข้อมูลที่อ่านได้</p>
-          </div>
-          <div className="flex h-36 items-end gap-2 border-b border-border/80 pb-1" role="img" aria-label={chart.title}>
-            {chart.points.map((point) => (
-              <div key={point.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
-                <span className="text-[10px] text-muted-foreground">{point.value.toLocaleString()}</span>
-                <span className="w-full min-w-3 rounded-t-sm bg-primary/80" style={{ height: `${Math.max(7, (point.value / maxValue) * 100)}%` }} />
-                <span className="max-w-full truncate text-[10px] text-muted-foreground" title={point.label}>{point.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <p className="px-4 py-3 text-xs leading-5 text-muted-foreground">ไม่สร้างกราฟอัตโนมัติ เพราะยังไม่พบคู่คอลัมน์ที่สรุปได้อย่างปลอดภัย</p>
-      )}
-      {analysis.caveats.slice(0, 2).map((caveat) => <p key={caveat} className="border-t border-border/70 px-4 py-2 text-[11px] leading-4 text-muted-foreground">{caveat}</p>)}
-    </section>
-  );
-}
-
 function FileAnalysisDataRenderer() {
   useAssistantDataUI({ name: "tabular-analysis", render: TabularAnalysisCard });
   return null;
@@ -224,7 +188,6 @@ export const Assistant = ({ conversationId, initialMessages }: AssistantProps) =
   const chat = useChat({
     id: activeConversationId,
     messages: initialMessages,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     transport,
     onFinish: () => {
       window.history.replaceState(null, "", `/?conversation=${encodeURIComponent(activeConversationId)}`);

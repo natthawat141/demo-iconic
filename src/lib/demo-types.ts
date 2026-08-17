@@ -26,6 +26,8 @@ export type TabularAnalysisData = {
       name: string;
       rowCount: number;
       columnCount: number;
+      columns?: Array<{ name: string; kind: string }>;
+      previewRows?: string[][];
     };
     chart: {
       kind: "bar" | "line";

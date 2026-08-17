@@ -99,7 +99,7 @@ function localGcloudStorage() {
   const args = process.platform === "win32"
     ? ["/d", "/s", "/c", "gcloud auth print-access-token"]
     : ["auth", "print-access-token"];
-  const accessToken = execFileSync(command, args, {
+  const accessToken = execFileSync(/* turbopackIgnore: true */ command, args, {
     encoding: "utf8",
     windowsHide: true,
   }).trim();
@@ -214,6 +214,12 @@ export async function uploadToDemoBucket(input: {
 export function spreadsheetPrompt(fileName: string, analysis: ReturnType<typeof analyzeTabularData>) {
   const selected = analysis.selectedSheet;
   const columns = selected?.columns.slice(0, 8).map((column) => `${column.name} (${column.kind})`).join(", ") ?? "ไม่พบหัวตาราง";
+  const preview = selected?.previewRows.slice(0, 5).map((row) => row.slice(0, 8).join(" | ")).join("\n") ?? "";
+  const numericStats = selected?.columns
+    .filter((column) => column.numeric)
+    .slice(0, 5)
+    .map((column) => `${column.name}: min=${column.numeric!.min}, max=${column.numeric!.max}, sum=${column.numeric!.sum}, avg=${Number(column.numeric!.average.toFixed(2))}`)
+    .join("\n") ?? "";
   const chart = analysis.chart ? `${analysis.chart.kind} chart: ${analysis.chart.title}` : "ไม่มีกราฟที่สรุปอย่างปลอดภัย";
   const chartPoints = analysis.chart
     ? analysis.chart.points.map((point) => `${point.label}=${point.value}`).join(", ")
@@ -222,9 +228,11 @@ export function spreadsheetPrompt(fileName: string, analysis: ReturnType<typeof 
     `ผู้ใช้แนบไฟล์ ${fileName} แล้ว`,
     `มี ${analysis.sheets.length} ชีต; ชีตที่อ่าน: ${selected?.name ?? "-"} (${selected?.rowCount ?? 0} แถว)`,
     `คอลัมน์: ${columns}`,
+    numericStats ? `สถิติตัวเลขที่คำนวณแล้ว:\n${numericStats}` : "",
+    preview ? `ตัวอย่างแถว (เรียงตามคอลัมน์ข้างต้น):\n${preview}` : "",
     `ข้อเสนอกราฟ: ${chart}`,
     chartPoints ? `ค่าที่ใช้สร้างกราฟ: ${chartPoints}` : "",
-    "ช่วยอธิบายสิ่งที่อ่านได้อย่างกระชับ โดยบอกข้อจำกัดของข้อมูลถ้ามี และอย่าสรุปเกินกว่าข้อมูลนี้",
+    "ช่วยอธิบาย insight ที่ตรวจย้อนกลับได้อย่างกระชับ เสนอคำถามวิเคราะห์ต่อหรือสคริปต์ที่เหมาะกับคอลัมน์จริงเมื่อผู้ใช้ขอ และบอกข้อจำกัดของข้อมูล ห้ามสรุปเกินกว่าข้อมูลนี้",
   ].join("\n");
 }
 

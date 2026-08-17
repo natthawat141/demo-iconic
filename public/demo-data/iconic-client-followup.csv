@@ -1,0 +1,13 @@
+client_segment,followup_status,days_since_contact,preferred_channel,owner_team,next_action
+New lead,Waiting reply,2,LINE,North,Send short recap
+New lead,Meeting booked,0,Phone,Central,Prepare discovery questions
+Existing client,Annual review due,14,Email,South,Confirm review slot
+Referral,Waiting reply,5,LINE,Central,Ask referrer for context
+Existing client,Documents pending,3,Email,North,Send document checklist
+New lead,Proposal sent,7,Phone,South,Call to clarify concerns
+Referral,Meeting booked,1,Video call,Central,Prepare meeting brief
+Existing client,Claim follow-up,2,LINE,North,Check current status
+New lead,No response,10,Email,South,Close loop politely
+Existing client,Review completed,0,Email,Central,Send meeting summary
+Referral,Proposal sent,4,Phone,North,Confirm decision timeline
+New lead,Documents pending,6,LINE,South,Remind with exact missing items

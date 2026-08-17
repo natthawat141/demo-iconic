@@ -18,11 +18,6 @@ import {
   ReasoningTrigger,
 } from "@/components/reasoning";
 import { ToolFallback } from "@/components/tool-fallback";
-import {
-  ToolGroupContent,
-  ToolGroupRoot,
-  ToolGroupTrigger,
-} from "@/components/tool-group";
 import { TooltipIconButton } from "@/components/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -114,13 +109,13 @@ const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
       >
         <div className={cn("mx-auto flex w-full max-w-(--thread-max-width) flex-1 flex-col px-4 pt-6 sm:px-6", isEmpty && "justify-center pb-10")}>
           <AuiIf condition={isNewChatView}><Welcome /></AuiIf>
-          <div data-slot="aui_message-group" className="mb-14 flex flex-col gap-y-6 empty:hidden">
+          <div data-slot="aui_message-group" className="mb-24 flex flex-col gap-y-6 empty:hidden">
             <ThreadPrimitive.Messages>{() => <ThreadMessage />}</ThreadPrimitive.Messages>
           </div>
           <ThreadPrimitive.ViewportFooter
             className={cn(
-              "aui-thread-viewport-footer flex flex-col gap-4 overflow-visible bg-transparent pb-4 md:pb-6",
-              !isEmpty && "sticky bottom-0 mt-auto rounded-t-(--composer-radius)",
+              "aui-thread-viewport-footer flex flex-col gap-4 overflow-visible pb-4 md:pb-6",
+              !isEmpty && "sticky bottom-0 mt-auto bg-background pt-2",
             )}
           >
             <ThreadScrollToBottom />
@@ -161,13 +156,13 @@ const ThreadWelcome: FC = () => (
 
 const Composer: FC = () => (
   <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
-    <div data-slot="aui_composer-shell" className="flex w-full flex-col gap-2 rounded-[1.45rem] bg-card px-2.5 py-2 shadow-sm ring-1 ring-input transition-[box-shadow] focus-within:ring-2 focus-within:ring-ring">
+    <div data-slot="aui_composer-shell" className="flex w-full flex-col gap-2 rounded-xl border border-input bg-card px-2 py-1.5 transition-colors focus-within:border-primary/70">
       <ComposerAttachments />
-      <div className="flex min-h-11 items-end gap-1.5">
+      <div className="flex min-h-11 items-center gap-1.5">
         <ComposerAddAttachment />
         <ComposerPrimitive.Input
           placeholder="ถามน้องฟ้า..."
-          className="aui-composer-input caret-primary placeholder:text-muted-foreground/80 max-h-36 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-5 outline-none"
+          className="aui-composer-input caret-primary placeholder:text-muted-foreground/80 max-h-36 min-h-11 flex-1 resize-none bg-transparent px-2 py-3 text-[15px] leading-5 outline-none"
           rows={1}
           autoFocus
           enterKeyHint="send"
@@ -184,14 +179,14 @@ const ComposerAction: FC = () => (
   <div className="aui-composer-action-wrapper flex shrink-0 items-center gap-1">
     <AuiIf condition={(state) => state.thread.capabilities.dictation}>
       <AuiIf condition={(state) => state.composer.dictation == null}>
-        <ComposerPrimitive.Dictate render={<TooltipIconButton tooltip="Voice input" side="bottom" type="button" variant="ghost" size="icon" className="aui-composer-dictate size-9 rounded-full" aria-label="Start voice input" />}><MicIcon className="size-4" /></ComposerPrimitive.Dictate>
+        <ComposerPrimitive.Dictate render={<TooltipIconButton tooltip="พูดเพื่อพิมพ์" side="bottom" type="button" variant="ghost" size="icon" className="aui-composer-dictate size-10 rounded-lg" aria-label="พูดเพื่อพิมพ์" />}><MicIcon className="size-4" /></ComposerPrimitive.Dictate>
       </AuiIf>
     </AuiIf>
     <AuiIf condition={(state) => !state.thread.isRunning}>
-      <ComposerPrimitive.Send render={<TooltipIconButton tooltip="ส่งคำถาม" side="bottom" type="button" variant="default" size="icon" className="aui-composer-send size-9 rounded-full" aria-label="ส่งคำถาม" />}><ArrowUpIcon className="size-4" /></ComposerPrimitive.Send>
+      <ComposerPrimitive.Send render={<TooltipIconButton tooltip="ส่งคำถาม" side="bottom" type="button" variant="default" size="icon" className="aui-composer-send size-10 rounded-lg" aria-label="ส่งคำถาม" />}><ArrowUpIcon className="size-4" /></ComposerPrimitive.Send>
     </AuiIf>
     <AuiIf condition={(state) => state.thread.isRunning}>
-      <ComposerPrimitive.Cancel render={<Button type="button" variant="default" size="icon" className="aui-composer-cancel size-9 rounded-full" aria-label="Stop generating" />}><SquareIcon className="size-3.5 fill-current" /></ComposerPrimitive.Cancel>
+      <ComposerPrimitive.Cancel render={<Button type="button" variant="default" size="icon" className="aui-composer-cancel size-10 rounded-lg" aria-label="หยุดสร้างคำตอบ" />}><SquareIcon className="size-3.5 fill-current" /></ComposerPrimitive.Cancel>
     </AuiIf>
   </div>
 );
@@ -223,7 +218,7 @@ const AssistantMessage: FC = () => {
               case "group-chainOfThought": return <div data-slot="aui_chain-of-thought">{children}</div>;
               case "group-tool":
                 if (ToolGroup) return <ToolGroup group={part}>{children}</ToolGroup>;
-                return <ToolGroupRoot variant="ghost"><ToolGroupTrigger count={part.indices.length} active={part.status.type === "running"} /><ToolGroupContent>{children}</ToolGroupContent></ToolGroupRoot>;
+                return part.status.type === "running" ? <p className="my-2 flex items-center gap-2 text-xs text-muted-foreground"><RefreshCwIcon className="size-3.5 animate-spin" />กำลังค้นข้อมูล...</p> : null;
               case "group-reasoning": {
                 if (ReasoningGroup) return <ReasoningGroup group={part}>{children}</ReasoningGroup>;
                 const running = part.status.type === "running";
@@ -243,7 +238,7 @@ const AssistantMessage: FC = () => {
         <MessageError />
       </div>
       <div className="flex justify-end pt-1.5">
-        <div className="flex items-center gap-1"><AnswerFeedback /><AssistantActionBar /></div>
+        <div className="flex items-center gap-1"><MessageSpeechButton /><AnswerFeedback /><AssistantActionBar /></div>
       </div>
     </MessagePrimitive.Root>
   );
@@ -276,7 +271,6 @@ const AnswerFeedback: FC = () => {
 
 const AssistantActionBar: FC = () => (
   <ActionBarPrimitive.Root hideWhenRunning autohide="not-last" className="aui-assistant-action-bar-root text-muted-foreground flex items-center gap-1">
-    <MessageSpeechButton />
     <ActionBarPrimitive.Copy render={<TooltipIconButton tooltip="Copy" />}>
       <AuiIf condition={(state) => state.message.isCopied}><CheckIcon /></AuiIf>
       <AuiIf condition={(state) => !state.message.isCopied}><CopyIcon /></AuiIf>
@@ -323,14 +317,18 @@ const MessageSpeechButton: FC = () => {
   }
 
   return (
-    <TooltipIconButton
-      tooltip={speaking ? "หยุดอ่านคำตอบ" : "อ่านคำตอบออกเสียง"}
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
       type="button"
       onClick={toggleSpeech}
       aria-label={speaking ? "หยุดอ่านคำตอบ" : "อ่านคำตอบออกเสียง"}
+      title={speaking ? "หยุดอ่านคำตอบ" : "อ่านคำตอบออกเสียง"}
     >
-      {speaking ? <VolumeXIcon /> : <Volume2Icon />}
-    </TooltipIconButton>
+      {speaking ? <VolumeXIcon className="size-3.5" /> : <Volume2Icon className="size-3.5" />}
+      {speaking ? "หยุดอ่าน" : "ฟังคำตอบ"}
+    </Button>
   );
 };
 
