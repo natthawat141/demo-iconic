@@ -38,10 +38,18 @@ export interface ChartSpec {
   points: Array<{ label: string; value: number }>;
 }
 
+export interface BreakdownSpec {
+  labelColumn: string;
+  valueColumn: string;
+  aggregation: "sum";
+  points: Array<{ label: string; value: number }>;
+}
+
 export interface TabularAnalysis {
   selectedSheet: TabularSheetSummary;
   sheets: Array<Pick<TabularSheetSummary, "name" | "rowCount" | "columnCount">>;
   chart: ChartSpec | null;
+  breakdowns: BreakdownSpec[];
   caveats: string[];
 }
 
@@ -60,6 +68,7 @@ export const TABULAR_ANALYSIS_LIMITS = {
   maxCellCharacters: 10_000,
   maxPreviewRows: 5,
   maxChartPoints: 12,
+  maxBreakdowns: 18,
 } as const;
 
 const NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
@@ -254,6 +263,38 @@ function recommendChart(summary: TabularSheetSummary, values: string[][]): Chart
   return null;
 }
 
+function summarizeBreakdowns(summary: TabularSheetSummary, values: string[][]): BreakdownSpec[] {
+  const labelIndexes = summary.columns
+    .map((column, index) => ({ column, index }))
+    .filter(({ column }) => (column.kind === "string" || column.kind === "boolean") && column.uniqueCount >= 2 && column.uniqueCount <= TABULAR_ANALYSIS_LIMITS.maxChartPoints);
+  const valueIndexes = summary.columns
+    .map((column, index) => ({ column, index }))
+    .filter(({ column }) => column.kind === "number");
+  const breakdowns: BreakdownSpec[] = [];
+
+  for (const label of labelIndexes) {
+    for (const value of valueIndexes) {
+      const totals = new Map<string, number>();
+      for (const row of values) {
+        const labelValue = row[label.index];
+        const numberValue = Number(row[value.index]);
+        if (!labelValue || !Number.isFinite(numberValue)) continue;
+        totals.set(labelValue, (totals.get(labelValue) ?? 0) + numberValue);
+      }
+      if (totals.size < 2) continue;
+      breakdowns.push({
+        labelColumn: label.column.name,
+        valueColumn: value.column.name,
+        aggregation: "sum",
+        points: [...totals].map(([pointLabel, pointValue]) => ({ label: pointLabel, value: pointValue }))
+          .sort((left, right) => right.value - left.value),
+      });
+      if (breakdowns.length >= TABULAR_ANALYSIS_LIMITS.maxBreakdowns) return breakdowns;
+    }
+  }
+  return breakdowns;
+}
+
 /**
  * Analyses CSV text or a workbook that has already been decoded by the upload layer.
  * Binary XLS/XLSX decoding is intentionally outside this pure dependency-free module.
@@ -286,6 +327,7 @@ export function analyzeTabularData(input: TabularInput): TabularAnalysis {
       columnCount: summary.columnCount,
     })),
     chart: recommendChart(selected.summary, selected.values),
+    breakdowns: summarizeBreakdowns(selected.summary, selected.values),
     caveats,
   };
 }

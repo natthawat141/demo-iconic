@@ -54,6 +54,20 @@ describe("tabular analysis", () => {
     });
   });
 
+  it("computes grouped totals from every row for follow-up questions", () => {
+    const analysis = analyzeTabularData({
+      format: "csv",
+      content: "team,revenue\nNorth,100\nCentral,250\nNorth,50\nCentral,300\n",
+    });
+
+    expect(analysis.breakdowns).toContainEqual({
+      labelColumn: "team",
+      valueColumn: "revenue",
+      aggregation: "sum",
+      points: [{ label: "Central", value: 550 }, { label: "North", value: 150 }],
+    });
+  });
+
   it("does not invent a chart for text-only data", () => {
     const analysis = analyzeTabularData({
       format: "csv",

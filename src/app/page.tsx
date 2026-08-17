@@ -25,7 +25,7 @@ export default async function Home({
     <Assistant
       key={conversation?.conversation.id ?? `new-${newThreadKey ?? "default"}`}
       conversationId={conversation?.conversation.id}
-      initialMessages={conversation ? toHistoryMessages(conversation) : []}
+      initialMessages={conversation ? await toHistoryMessages(conversation) : []}
     />
   );
 }

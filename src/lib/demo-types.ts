@@ -34,6 +34,12 @@ export type TabularAnalysisData = {
       title: string;
       points: Array<{ label: string; value: number }>;
     } | null;
+    breakdowns?: Array<{
+      labelColumn: string;
+      valueColumn: string;
+      aggregation: "sum";
+      points: Array<{ label: string; value: number }>;
+    }>;
     caveats: string[];
   };
 };

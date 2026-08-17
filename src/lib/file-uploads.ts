@@ -224,6 +224,9 @@ export function spreadsheetPrompt(fileName: string, analysis: ReturnType<typeof 
   const chartPoints = analysis.chart
     ? analysis.chart.points.map((point) => `${point.label}=${point.value}`).join(", ")
     : "";
+  const breakdowns = (analysis.breakdowns ?? [])
+    .map((breakdown) => `${breakdown.valueColumn} by ${breakdown.labelColumn}: ${breakdown.points.map((point) => `${point.label}=${point.value}`).join(", ")}`)
+    .join("\n");
   return [
     `ผู้ใช้แนบไฟล์ ${fileName} แล้ว`,
     `มี ${analysis.sheets.length} ชีต; ชีตที่อ่าน: ${selected?.name ?? "-"} (${selected?.rowCount ?? 0} แถว)`,
@@ -232,6 +235,7 @@ export function spreadsheetPrompt(fileName: string, analysis: ReturnType<typeof 
     preview ? `ตัวอย่างแถว (เรียงตามคอลัมน์ข้างต้น):\n${preview}` : "",
     `ข้อเสนอกราฟ: ${chart}`,
     chartPoints ? `ค่าที่ใช้สร้างกราฟ: ${chartPoints}` : "",
+    breakdowns ? `สรุปแยกกลุ่มที่คำนวณจากทุกแถวแล้ว:\n${breakdowns}` : "",
     "ช่วยอธิบาย insight ที่ตรวจย้อนกลับได้อย่างกระชับ เสนอคำถามวิเคราะห์ต่อหรือสคริปต์ที่เหมาะกับคอลัมน์จริงเมื่อผู้ใช้ขอ และบอกข้อจำกัดของข้อมูล ห้ามสรุปเกินกว่าข้อมูลนี้",
   ].join("\n");
 }

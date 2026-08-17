@@ -26,7 +26,7 @@ export async function GET(
       title: detail.conversation.title,
       updatedAt: detail.conversation.updatedAt.toISOString(),
     },
-    messages: toHistoryMessages(detail),
+    messages: await toHistoryMessages(detail),
   }), setCookie);
 }
 
