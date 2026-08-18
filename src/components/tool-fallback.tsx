@@ -28,6 +28,7 @@ import {
   ConversationChartTool,
   KnowledgeOverviewTool,
   KnowledgeSearchTool,
+  WebSearchTool,
 } from "@/components/knowledge-tool-ui";
 
 const ANIMATION_DURATION = 200;
@@ -579,6 +580,10 @@ const GenericToolFallback: ToolCallMessagePartComponent = ({
 };
 
 const ToolFallbackImpl: ToolCallMessagePartComponent = (props) => {
+  if (props.toolName === "rememberUserContext") return null;
+  if (props.toolName === "searchWeb") {
+    return <WebSearchTool status={props.status} result={props.result} />;
+  }
   if (props.toolName === "searchKnowledge") {
     return <KnowledgeSearchTool status={props.status} result={props.result} />;
   }

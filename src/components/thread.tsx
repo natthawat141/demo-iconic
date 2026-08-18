@@ -158,14 +158,7 @@ const ThreadActivity: FC = () => {
   const label = useAuiState((state) => {
     if (!state.thread.isRunning) return null;
     const latest = state.thread.messages.at(-1);
-    if (latest?.role !== "assistant") return "กำลังเตรียมคำตอบ...";
-    const toolCall = [...latest.content].reverse().find((part) => part.type === "tool-call");
-    if (!toolCall) return "กำลังคิดและตรวจข้อมูล...";
-    if (toolCall.result !== undefined) return "กำลังสรุปคำตอบ...";
-    if (toolCall.toolName === "searchWeb") return "กำลังค้นข้อมูลบนเว็บ...";
-    if (toolCall.toolName === "searchKnowledge") return "กำลังเปิดคลังความรู้...";
-    if (toolCall.toolName === "showKnowledgeOverview" || toolCall.toolName === "renderChart") return "กำลังสร้างกราฟ...";
-    return "กำลังประมวลผลข้อมูล...";
+    return latest?.role === "assistant" ? null : "กำลังเตรียมคำตอบ...";
   });
   if (!label) return null;
   return (
@@ -175,6 +168,19 @@ const ThreadActivity: FC = () => {
     </div>
   );
 };
+
+function useAssistantActivityLabel() {
+  return useAuiState((state) => {
+    if (state.message.role !== "assistant" || state.message.status.type !== "running") return null;
+    const toolCall = [...state.message.content].reverse().find((part) => part.type === "tool-call");
+    if (!toolCall) return "กำลังคิดและตรวจข้อมูล...";
+    if (toolCall.result !== undefined) return "กำลังสรุปคำตอบ...";
+    if (toolCall.toolName === "searchWeb") return "กำลังค้นข้อมูลบนเว็บ...";
+    if (toolCall.toolName === "searchKnowledge") return "กำลังเปิดคลังความรู้...";
+    if (toolCall.toolName === "showKnowledgeOverview" || toolCall.toolName === "renderChart") return "กำลังสร้างกราฟ...";
+    return "กำลังประมวลผลข้อมูล...";
+  });
+}
 
 const ThreadWelcome: FC = () => (
   <div className="aui-thread-welcome-root mb-5 text-center">
@@ -243,8 +249,18 @@ const AssistantMessage: FC = () => {
   const { ToolFallback: ToolFallbackComponent = ToolFallback, ToolGroup, ReasoningGroup } = useContext(ThreadComponentsContext);
   const hasRenderableContent = useAuiState((state) => state.message.content.some((part) => part.type !== "reasoning"));
   const status = useAuiState((state) => state.message.role === "assistant" ? state.message.status.type : "complete");
-  if (!hasRenderableContent && status === "running") return null;
+  const activityLabel = useAssistantActivityLabel();
   if (!hasRenderableContent) {
+    if (status === "running") {
+      return (
+        <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="py-1">
+          <div className="flex min-h-7 items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+            <AiLoader decorative label={activityLabel ?? "กำลังเตรียมคำตอบ"} />
+            <span>{activityLabel ?? "กำลังเตรียมคำตอบ..."}</span>
+          </div>
+        </MessagePrimitive.Root>
+      );
+    }
     return (
       <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="py-1">
         <div role="alert" className="max-w-[75ch] rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -255,6 +271,12 @@ const AssistantMessage: FC = () => {
   }
   return (
     <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="fade-in slide-in-from-bottom-1 animate-in relative py-1 duration-150">
+      {activityLabel ? (
+        <div className="mb-2 flex min-h-7 items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+          <AiLoader decorative label={activityLabel} />
+          <span>{activityLabel}</span>
+        </div>
+      ) : null}
       <div data-slot="aui_assistant-message-content" className="max-w-[75ch] text-foreground leading-relaxed wrap-break-word">
         <MessagePrimitive.GroupedParts
           groupBy={groupPartByType({
@@ -267,10 +289,9 @@ const AssistantMessage: FC = () => {
             switch (part.type) {
               case "group-chainOfThought": return <div data-slot="aui_chain-of-thought">{children}</div>;
               case "group-tool":
+                if (part.status.type === "running") return null;
                 if (ToolGroup) return <ToolGroup group={part}>{children}</ToolGroup>;
-                return part.status.type === "running"
-                  ? <p className="my-2 flex items-center gap-2 text-xs text-muted-foreground" role="status"><AiLoader decorative label="กำลังค้นข้อมูล" />กำลังค้นข้อมูล...</p>
-                  : <div data-slot="aui_tool-group">{children}</div>;
+                return <div data-slot="aui_tool-group">{children}</div>;
               case "group-reasoning": {
                 if (ReasoningGroup) return <ReasoningGroup group={part}>{children}</ReasoningGroup>;
                 const running = part.status.type === "running";
@@ -289,9 +310,11 @@ const AssistantMessage: FC = () => {
         </MessagePrimitive.GroupedParts>
         <MessageError />
       </div>
-      <div className="flex justify-end pt-1.5">
-        <div className="flex items-center gap-1"><MessageSpeechButton /><AnswerFeedback /><AssistantActionBar /></div>
-      </div>
+      {status !== "running" ? (
+        <div className="flex justify-end pt-1.5">
+          <div className="flex items-center gap-1"><MessageSpeechButton /><AnswerFeedback /><AssistantActionBar /></div>
+        </div>
+      ) : null}
     </MessagePrimitive.Root>
   );
 };

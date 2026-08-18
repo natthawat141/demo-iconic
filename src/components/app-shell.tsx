@@ -200,7 +200,17 @@ function MemberConversationHistory({ onNavigate }: { onNavigate: () => void }) {
 
   useEffect(() => {
     const initialRefresh = window.setTimeout(() => void refreshHistory(), query ? 180 : 0);
-    const refresh = () => void refreshHistory();
+    const refresh = (event?: Event) => {
+      const detail = event instanceof CustomEvent
+        ? event.detail as { conversation?: ConversationSummary } | undefined
+        : undefined;
+      const optimistic = detail?.conversation;
+      if (optimistic && (!query || optimistic.title.toLocaleLowerCase("th").includes(query.trim().toLocaleLowerCase("th")))) {
+        setConversations((current) => [optimistic, ...current.filter((item) => item.id !== optimistic.id)]);
+        setLoading(false);
+      }
+      void refreshHistory();
+    };
     window.addEventListener("iconic:conversation-updated", refresh);
     window.addEventListener("focus", refresh);
     return () => {

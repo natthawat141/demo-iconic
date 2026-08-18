@@ -179,6 +179,17 @@ type AssistantProps = {
   initialMessages: UIMessage[];
 };
 
+function conversationTitle(messages: UIMessage[]) {
+  const firstUserMessage = messages.find((message) => message.role === "user");
+  const text = firstUserMessage?.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text?.slice(0, 80) || "บทสนทนาใหม่";
+}
+
 export const Assistant = ({ conversationId, initialMessages }: AssistantProps) => {
   const [newConversationId] = useState(() => crypto.randomUUID());
   const [dictationAdapter, setDictationAdapter] = useState<WebSpeechDictationAdapter>();
@@ -204,9 +215,19 @@ export const Assistant = ({ conversationId, initialMessages }: AssistantProps) =
     id: activeConversationId,
     messages: initialMessages,
     transport,
-    onFinish: () => {
+    throttle: 40,
+    onFinish: ({ messages, isDisconnect, isError }) => {
+      if (isDisconnect || isError) return;
       window.history.replaceState(null, "", `/?conversation=${encodeURIComponent(activeConversationId)}`);
-      window.dispatchEvent(new Event("iconic:conversation-updated"));
+      window.dispatchEvent(new CustomEvent("iconic:conversation-updated", {
+        detail: {
+          conversation: {
+            id: activeConversationId,
+            title: conversationTitle(messages),
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      }));
     },
   });
   const runtime = useAISDKRuntime(chat, {

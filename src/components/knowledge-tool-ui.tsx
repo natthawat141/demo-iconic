@@ -4,6 +4,7 @@ import {
   BarChart3,
   BookOpenCheck,
   CircleAlert,
+  Globe2,
   LoaderCircle,
 } from "lucide-react";
 import type { ToolCallMessagePartStatus } from "@assistant-ui/react";
@@ -29,6 +30,11 @@ type ConversationChartResult = {
   points: Array<{ label: string; value: number }>;
 };
 
+type WebSearchResult = {
+  available: boolean;
+  resultCount?: number;
+};
+
 function isSearchResult(value: unknown): value is SearchResult {
   return Boolean(value && typeof value === "object" && "found" in value);
 }
@@ -47,6 +53,28 @@ function isConversationChartResult(value: unknown): value is ConversationChartRe
     value && typeof value === "object" &&
       "title" in value && "kind" in value && "points" in value &&
       Array.isArray((value as ConversationChartResult).points),
+  );
+}
+
+function isWebSearchResult(value: unknown): value is WebSearchResult {
+  return Boolean(value && typeof value === "object" && "available" in value);
+}
+
+export function WebSearchTool({
+  status,
+  result,
+}: {
+  status?: ToolCallMessagePartStatus;
+  result?: unknown;
+}) {
+  if (status?.type === "running") return null;
+  const data = isWebSearchResult(result) ? result : null;
+  if (!data?.available) return null;
+  return (
+    <div className="my-2 flex w-fit max-w-full items-center gap-2 text-xs text-muted-foreground">
+      <Globe2 className="size-3.5 text-primary" aria-hidden="true" />
+      <span>ค้นข้อมูลบนเว็บแล้ว {data.resultCount ?? 0} แหล่ง</span>
+    </div>
   );
 }
 
