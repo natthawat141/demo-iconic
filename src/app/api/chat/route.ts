@@ -237,7 +237,7 @@ function writeWebSources(
   sources: WebSearchResult[],
 ) {
   const unique = new Map(sources.map((source) => [source.url, source]));
-  for (const source of unique.values()) {
+  for (const source of [...unique.values()].slice(0, 5)) {
     writer.write({
       type: "source-url",
       sourceId: `web-${crypto.randomUUID()}`,
@@ -566,7 +566,7 @@ ${memoryContext(relevantMemories) || "- ไม่มีบริบทที่�
         tools,
         toolChoice,
         prepareStep: ({ stepNumber }) => stepNumber > 0
-          ? { toolChoice: "none" as const }
+          ? { toolChoice: "none" as const, activeTools: [] }
           : undefined,
         stopWhen: stepCountIs(3),
         temperature: 0.35,
