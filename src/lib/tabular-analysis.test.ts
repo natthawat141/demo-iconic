@@ -54,6 +54,30 @@ describe("tabular analysis", () => {
     });
   });
 
+  it("keeps formatted Excel currency numeric for a trend chart", () => {
+    const analysis = analyzeTabularData({
+      format: "workbook",
+      sheets: [{
+        name: "ค่าใช้จ่าย",
+        rows: [
+          ["เดือน", "ยอดเบิกจ่าย (บาท)"],
+          ["2026-01-01", "118,000"],
+          ["2026-02-01", "126,000"],
+        ],
+      }],
+    });
+
+    expect(analysis.selectedSheet.columns[1]).toMatchObject({
+      kind: "number",
+      numeric: { sum: 244000 },
+    });
+    expect(analysis.chart).toMatchObject({
+      kind: "line",
+      valueColumn: "ยอดเบิกจ่าย (บาท)",
+    });
+    expect(analysis.chart?.points[0]).toEqual({ label: "2026-01-01", value: 118000 });
+  });
+
   it("computes grouped totals from every row for follow-up questions", () => {
     const analysis = analyzeTabularData({
       format: "csv",

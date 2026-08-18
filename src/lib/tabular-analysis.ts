@@ -74,6 +74,16 @@ export const TABULAR_ANALYSIS_LIMITS = {
 const NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
 
+function numericValue(value: string) {
+  const compact = value.replace(/,/g, "");
+  const isPercent = compact.endsWith("%");
+  const numeric = isPercent ? compact.slice(0, -1) : compact;
+  if (!NUMBER_PATTERN.test(numeric)) return null;
+  const parsed = Number(numeric);
+  if (!Number.isFinite(parsed)) return null;
+  return isPercent ? parsed / 100 : parsed;
+}
+
 function cellToText(value: TabularCell) {
   if (value == null) return "";
   if (typeof value === "boolean") return value ? "true" : "false";
@@ -170,10 +180,10 @@ function toHeaders(row: string[]) {
 function classify(values: string[]): ColumnKind {
   const filled = values.filter(Boolean);
   if (filled.length === 0) return "empty";
-  if (filled.every((value) => NUMBER_PATTERN.test(value) && Number.isFinite(Number(value)))) return "number";
+  if (filled.every((value) => numericValue(value) !== null)) return "number";
   if (filled.every((value) => /^(true|false)$/i.test(value))) return "boolean";
   if (filled.every((value) => DATE_PATTERN.test(value) && !Number.isNaN(Date.parse(value)))) return "date";
-  const recognized = filled.filter((value) => NUMBER_PATTERN.test(value) || DATE_PATTERN.test(value) || /^(true|false)$/i.test(value));
+  const recognized = filled.filter((value) => numericValue(value) !== null || DATE_PATTERN.test(value) || /^(true|false)$/i.test(value));
   return recognized.length === 0 ? "string" : "mixed";
 }
 
@@ -203,7 +213,7 @@ function summarizeSheet(input: TabularSheetInput): { summary: TabularSheetSummar
       uniqueCount: new Set(nonEmpty).size,
     };
     if (kind === "number") {
-      const numbers = nonEmpty.map(Number);
+      const numbers = nonEmpty.map((value) => numericValue(value)!);
       const sum = numbers.reduce((total, value) => total + value, 0);
       summary.numeric = {
         min: Math.min(...numbers),
@@ -236,8 +246,8 @@ function aggregateChart(
   const totals = new Map<string, number>();
   for (const row of values) {
     const label = row[labelIndex];
-    const value = Number(row[valueIndex]);
-    if (!label || !Number.isFinite(value)) continue;
+    const value = numericValue(row[valueIndex]);
+    if (!label || value === null) continue;
     totals.set(label, (totals.get(label) ?? 0) + value);
   }
   const points = [...totals].map(([label, value]) => ({ label, value }));
@@ -277,8 +287,8 @@ function summarizeBreakdowns(summary: TabularSheetSummary, values: string[][]): 
       const totals = new Map<string, number>();
       for (const row of values) {
         const labelValue = row[label.index];
-        const numberValue = Number(row[value.index]);
-        if (!labelValue || !Number.isFinite(numberValue)) continue;
+        const numberValue = numericValue(row[value.index]);
+        if (!labelValue || numberValue === null) continue;
         totals.set(labelValue, (totals.get(labelValue) ?? 0) + numberValue);
       }
       if (totals.size < 2) continue;
