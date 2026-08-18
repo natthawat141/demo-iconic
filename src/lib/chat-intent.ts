@@ -15,6 +15,7 @@ const overviewPattern = /(ภาพรวม.*knowledge|knowledge.*ภาพร�
 const visualizationPattern = /(chart|graph|กราฟ|แผนภูมิ|visuali[sz]e|แนวโน้ม)/iu;
 const explicitWebPattern = /(ค้น(?:หา)?|เสิร์ช|search|ดู).{0,20}(เว็บ|อินเทอร์เน็ต|internet|web|ออนไลน์)|(?:เว็บ|อินเทอร์เน็ต|internet|web).{0,20}(ค้น(?:หา)?|เสิร์ช|search)/iu;
 const publicProfilePattern = /(?:ค้น(?:หา)?|เสิร์ช|search).{0,100}(?:คือใคร|ประวัติ|who is)/iu;
+const publicLookupPattern = /^(?:ช่วย)?(?:ค้น(?:หา)?|เสิร์ช|search|หา)\s*(?:ข้อมูล)?\s*.+/iu;
 const freshPublicInfoPattern = /(?:ข่าว|ราคา|หุ้น|ตลาด|อากาศ|เทรนด์|เทคโนโลยี|บริษัท|ผลิตภัณฑ์|กฎหมาย|ประกาศ|next\.js|react).{0,40}(?:ล่าสุด|วันนี้|ตอนนี้|ปัจจุบัน|current|latest|today)|(?:ล่าสุด|วันนี้|ตอนนี้|ปัจจุบัน|current|latest|today).{0,40}(?:ข่าว|ราคา|หุ้น|ตลาด|อากาศ|เทรนด์|เทคโนโลยี|บริษัท|ผลิตภัณฑ์|กฎหมาย|ประกาศ|next\.js|react)/iu;
 const internalContextPattern = /(iconic|น้องฟ้า|knowledge|ทีม(?:เรา)?|ของเรา|ของระบบเรา|ระบบ(?:ของ)?(?:เรา|ทีม)|ลูกค้า|กรมธรรม์|แนวทางขาย|ติดตามลูกค้า|หัวหน้าทีม)/iu;
 const generalDefinitionPattern = /^(api|apis|ฐานข้อมูล|database|rag|vector database|markdown|excel|csv)\s*(คืออะไร|คืออะไรครับ|คืออะไรคะ|หมายความว่าอะไร|what is)/iu;
@@ -47,11 +48,12 @@ export function conversationalReply(message: string) {
 export function classifyChatIntent(message: string, previousContext = ""): ChatIntent {
   const normalized = normalizeMessage(message);
   if (conversationalReply(message)) return "smalltalk";
-  if (explicitWebPattern.test(normalized) || publicProfilePattern.test(normalized) || freshPublicInfoPattern.test(normalized)) return "web";
+  if (explicitWebPattern.test(normalized)) return "web";
   if (overviewPattern.test(normalized)) return "overview";
   if (visualizationPattern.test(normalized)) return "visualize";
-  if (generalDefinitionPattern.test(normalized)) return "general";
   if (internalContextPattern.test(normalized)) return "knowledge";
+  if (publicProfilePattern.test(normalized) || publicLookupPattern.test(normalized) || freshPublicInfoPattern.test(normalized)) return "web";
+  if (generalDefinitionPattern.test(normalized)) return "general";
   if (ambiguousWorkPattern.test(normalized)) {
     return internalContextPattern.test(previousContext) ? "knowledge" : "ambiguous";
   }

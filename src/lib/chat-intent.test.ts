@@ -47,11 +47,13 @@ describe("chat intent routing", () => {
     "ข่าวเทคโนโลยีล่าสุดวันนี้",
     "search the web for current React release",
     "ค้นหาข้อมูล bill natthawat sawatdee ว่าเขาคือใคร",
+    "หาข้อมูล nathawat sawatdee ได้ไหม",
   ])("routes fresh public information to Tavily: %s", (message) => {
     expect(classifyChatIntent(message)).toBe("web");
   });
 
   it("does not send ordinary internal questions to the public web", () => {
     expect(classifyChatIntent("แนวทางติดตามลูกค้าของทีมเรา")).toBe("knowledge");
+    expect(classifyChatIntent("หาข้อมูลลูกค้าของทีมเรา")).toBe("knowledge");
   });
 });

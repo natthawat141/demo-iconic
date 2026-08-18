@@ -213,6 +213,10 @@ function directWebFallback(sources: WebSearchResult[], failure: string | null) {
   return `น้องฟ้าค้นเว็บให้แล้วค่ะ แต่คำตอบสรุปหยุดก่อนแสดงผล จึงนำข้อมูลที่ค้นได้มาให้ตรวจโดยตรงก่อน:\n\n${findings.join("\n")}\n\nแหล่งข้อมูลเปิดดูได้ด้านล่างค่ะ`;
 }
 
+function directGeneralFallback(question: string) {
+  return `น้องฟ้ายังสรุปคำตอบนี้ไม่ครบค่ะ ถ้าต้องการข้อมูลสาธารณะ ลองพิมพ์ว่า “ค้นเว็บ ${question}” ได้เลย หรือถ้าเป็นเรื่องของทีม ICONIC บอกบริบทเพิ่มอีกนิดนะคะ`;
+}
+
 function writeSources(
   writer: { write: (chunk: UIMessageChunk) => void },
   sources: RetrievedKnowledge[],
@@ -581,8 +585,8 @@ ${memoryContext(relevantMemories) || "- ไม่มีบริบทที่�
         const fallback = intent === "web"
           ? directWebFallback(usedWebSources, webSearchFailure)
           : intent === "knowledge"
-            ? knowledgeFallback ?? "ขอโทษค่ะ คำตอบหยุดก่อนแสดงผล กรุณาลองส่งคำถามอีกครั้งนะคะ"
-            : "ขอโทษค่ะ คำตอบหยุดก่อนแสดงผล กรุณาลองส่งคำถามอีกครั้งนะคะ";
+            ? knowledgeFallback ?? "น้องฟ้ายังสรุปข้อมูลจากคลังไม่ครบค่ะ ลองส่งคำถามอีกครั้ง หรือบอกบริบทของทีมเพิ่มอีกนิดนะคะ"
+            : directGeneralFallback(question);
         writeTextPart(writer, fallback);
       }
       try {
