@@ -283,7 +283,7 @@ export const ComposerAddAttachment: FC = () => {
           side="bottom"
           variant="ghost"
           size="icon"
-          className="aui-composer-add-attachment hover:bg-muted-foreground/15 dark:border-muted-foreground/15 dark:hover:bg-muted-foreground/30 size-10 rounded-lg p-1 text-xs font-semibold active:scale-[0.96] motion-reduce:transition-none"
+          className="aui-composer-add-attachment size-9 rounded-full p-1 text-xs font-semibold text-muted-foreground hover:bg-muted active:scale-[0.96] motion-reduce:transition-none"
           aria-label="แนบรูปภาพหรือไฟล์ข้อมูล (JPG, PNG, WebP, GIF, CSV, Excel, PDF, DOCX)"
         />
       }
