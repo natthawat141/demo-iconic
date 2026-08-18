@@ -32,6 +32,10 @@ describe("knowledge demo workflow", () => {
     ["ข้อมูลส่วนตัวอะไรห้ามใส่ใน Knowledge", "km-sensitive-data"],
     ["คำตอบ AI ผิดต้องแจ้งที่ไหน", "km-ai-feedback"],
     ["จะเตรียมประชุมออนไลน์ยังไง", "km-remote-meeting"],
+    ["เบิกค่าแท็กซี่ไปพบลูกค้าต้องทำอย่างไร", "km-expense-claim-workflow"],
+    ["พนักงานใหม่วันแรกต้องทำอะไรบ้าง", "km-new-hire-day-one"],
+    ["ทำโน้ตบุ๊กบริษัทหายต้องแจ้งใคร", "km-lost-device-response"],
+    ["ส่งไฟล์ Excel ให้ช่วยวิเคราะห์ต้องเตรียมอะไร", "km-data-analysis-request"],
   ])("ranks Thai query %s to %s", async (question, expectedId) => {
     const results = await retrieveKnowledge(question);
     expect(results[0]?.item.id).toBe(expectedId);

@@ -173,11 +173,13 @@ export async function rebuildKnowledgeIndex(force = false) {
   const approvedItems = await storage.listApprovedKnowledge();
   const existing = await storage.listChunks();
   const desiredModel = requestedModelKey();
+  const indexedItemIds = new Set(existing.map((chunk) => chunk.knowledgeItemId));
 
   if (
     !force &&
     existing.length > 0 &&
-    existing.every((chunk) => chunk.embeddingModel === desiredModel)
+    existing.every((chunk) => chunk.embeddingModel === desiredModel) &&
+    approvedItems.every((item) => indexedItemIds.has(item.id))
   ) {
     return desiredModel;
   }

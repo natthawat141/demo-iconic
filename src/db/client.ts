@@ -73,7 +73,12 @@ export function ensureSeeded() {
   if (value === 0) {
     db.insert(schema.knowledgeItems).values(seedKnowledge).run();
     db.insert(schema.knowledgeGaps).values(seedKnowledgeGaps).run();
+    return;
   }
+
+  // Demo knowledge evolves with the app. Add newly shipped examples without
+  // overwriting any item a team member has edited in the local database.
+  db.insert(schema.knowledgeItems).values(seedKnowledge).onConflictDoNothing().run();
 }
 
 export function resetDemoData() {

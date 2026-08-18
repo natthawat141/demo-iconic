@@ -93,12 +93,16 @@ function mapChunk(row: DatabaseRow): KnowledgeChunk {
   };
 }
 
-async function insertKnowledge(client: DatabaseClient, item: NewKnowledgeItem) {
+async function insertKnowledge(
+  client: DatabaseClient,
+  item: NewKnowledgeItem,
+  ignoreExisting = false,
+) {
   await client.query(
     `INSERT INTO knowledge_items
       (id, title, summary, content, category, tags, source_label, owner_name,
        status, review_date, approved_by, approved_at, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12, $13, $14)`,
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12, $13, $14)${ignoreExisting ? " ON CONFLICT (id) DO NOTHING" : ""}`,
     [
       item.id,
       item.title,
@@ -196,19 +200,23 @@ async function initialize() {
   const result = await database.query<{ count: string }>(
     "SELECT COUNT(*) AS count FROM knowledge_items",
   );
-  if (Number(result.rows[0]?.count ?? 0) === 0) {
-    const client = await database.connect();
-    try {
-      await client.query("BEGIN");
+  const client = await database.connect();
+  try {
+    await client.query("BEGIN");
+    if (Number(result.rows[0]?.count ?? 0) === 0) {
       for (const item of seedKnowledge) await insertKnowledge(client, item);
       for (const gap of seedKnowledgeGaps) await insertGap(client, gap);
-      await client.query("COMMIT");
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
+    } else {
+      // Static demo records may be added in a later release. This upsert is
+      // deliberately insert-only so it never replaces a team's edited data.
+      for (const item of seedKnowledge) await insertKnowledge(client, item, true);
     }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
 }
 
