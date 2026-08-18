@@ -220,7 +220,13 @@ export const Assistant = ({ conversationId, initialMessages }: AssistantProps) =
       <KnowledgeDataRenderer />
       <FileAnalysisDataRenderer />
       <div className="h-[calc(100dvh-3.75rem)]">
-        <Thread />
+        <Thread
+          voice={{
+            messages: chat.messages,
+            status: chat.status,
+            onSend: (text) => chat.sendMessage({ text }),
+          }}
+        />
       </div>
     </AssistantRuntimeProvider>
   );

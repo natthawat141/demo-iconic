@@ -21,7 +21,9 @@ import { ToolFallback } from "@/components/tool-fallback";
 import { TooltipIconButton } from "@/components/tooltip-icon-button";
 import { AiLoader } from "@/components/ui/ai-loader";
 import { Button } from "@/components/ui/button";
+import { VoiceConversation } from "@/components/voice-conversation";
 import { cn } from "@/lib/utils";
+import type { UIMessage } from "ai";
 import {
   ActionBarMorePrimitive,
   ActionBarPrimitive,
@@ -73,7 +75,14 @@ export type ThreadComponents = {
   ReasoningGroup?: ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>> | undefined;
 };
 
-export type ThreadProps = { components?: ThreadComponents | undefined };
+export type ThreadProps = {
+  components?: ThreadComponents | undefined;
+  voice?: {
+    messages: UIMessage[];
+    status: string;
+    onSend: (text: string) => Promise<void>;
+  } | undefined;
+};
 
 const EMPTY_COMPONENTS: ThreadComponents = {};
 const ThreadComponentsContext = createContext<ThreadComponents>(EMPTY_COMPONENTS);
@@ -82,16 +91,16 @@ const isNewChatView = (state: AssistantState) =>
   state.thread.messages.length === 0 &&
   (!state.thread.isLoading || state.threads.isLoading);
 
-export const Thread: FC<ThreadProps> = ({ components = EMPTY_COMPONENTS }) => {
+export const Thread: FC<ThreadProps> = ({ components = EMPTY_COMPONENTS, voice }) => {
   const isEmpty = useAuiState(isNewChatView);
   return (
     <ThreadComponentsContext.Provider value={components}>
-      <ThreadRoot isEmpty={isEmpty} />
+      <ThreadRoot isEmpty={isEmpty} voice={voice} />
     </ThreadComponentsContext.Provider>
   );
 };
 
-const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
+const ThreadRoot: FC<Pick<ThreadProps, "voice"> & { isEmpty: boolean }> = ({ isEmpty, voice }) => {
   const { Welcome = ThreadWelcome } = useContext(ThreadComponentsContext);
   return (
     <ThreadPrimitive.Root
@@ -127,7 +136,7 @@ const ThreadRoot: FC<{ isEmpty: boolean }> = ({ isEmpty }) => {
           >
             <ThreadScrollToBottom />
             <ThreadFollowupSuggestions />
-            <Composer />
+            <Composer voice={voice} />
           </ThreadPrimitive.ViewportFooter>
         </div>
       </ThreadPrimitive.Viewport>
@@ -161,7 +170,7 @@ const ThreadWelcome: FC = () => (
   </div>
 );
 
-const Composer: FC = () => (
+const Composer: FC<Pick<ThreadProps, "voice">> = ({ voice }) => (
   <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
     <div
       data-slot="aui_composer-shell"
@@ -178,15 +187,16 @@ const Composer: FC = () => (
       />
       <div className="flex items-center justify-between gap-2 px-0.5 pb-0.5">
         <ComposerAddAttachment />
-        <ComposerAction />
+        <ComposerAction voice={voice} />
       </div>
     </div>
     <p className="mt-2 text-center text-[10px] text-muted-foreground">น้องฟ้าอาจผิดพลาด โปรดตรวจสอบข้อมูลสำคัญ</p>
   </ComposerPrimitive.Root>
 );
 
-const ComposerAction: FC = () => (
+const ComposerAction: FC<Pick<ThreadProps, "voice">> = ({ voice }) => (
   <div className="aui-composer-action-wrapper flex shrink-0 items-center gap-1">
+    {voice ? <VoiceConversation {...voice} /> : null}
     <AuiIf condition={(state) => state.thread.capabilities.dictation}>
       <AuiIf condition={(state) => state.composer.dictation == null}>
         <ComposerPrimitive.Dictate render={<TooltipIconButton tooltip="พูดเพื่อพิมพ์" side="bottom" type="button" variant="ghost" size="icon" className="aui-composer-dictate size-9 rounded-full text-muted-foreground hover:bg-muted" aria-label="พูดเพื่อพิมพ์" />}><MicIcon className="size-4" /></ComposerPrimitive.Dictate>

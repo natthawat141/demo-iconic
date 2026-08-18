@@ -16,6 +16,7 @@ Demo บน Cloud Run: [iconic-knowledge-assistant](https://iconic-knowledge-ass
 - อ่านข้อความ PDF, สรุปคอลัมน์/สถิติ/ตัวอย่างแถว และสร้าง bar/line chart จาก CSV/Excel
 - เขียน Markdown, โค้ดหรือสคริปต์สั้นจากชื่อคอลัมน์ที่อ่านได้จริง
 - ฟังคำตอบภาษาไทย/อังกฤษผ่าน Web Speech API ของเบราว์เซอร์
+- โหมดคุยด้วยเสียง: กดไอคอนคลื่นเสียงในช่องแชตเพื่อพูด → ส่งคำถาม → อ่านคำตอบ → กลับมารอฟังต่อ (ต้องอนุญาตไมโครโฟน และใช้เบราว์เซอร์ที่รองรับ Web Speech API)
 - Clerk sign in/sign up และประวัติแชต/ไฟล์/usage แยกตาม user ID
 - ความจำข้ามบทสนทนาแบบ per-user: เพิ่ม/ตรวจ/ลบได้ที่ `/memory` และค้นเฉพาะบริบทที่เกี่ยวข้องก่อนตอบ
 - Admin workspace: ผู้ใช้, บทสนทนา, ไฟล์, token/model usage, Knowledge lifecycle, gaps และ Admin AI
