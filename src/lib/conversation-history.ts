@@ -64,11 +64,7 @@ export async function toHistoryMessages(
       const text = [message.content, unresolvedAttachmentSummary.join("\n")]
         .filter(Boolean)
         .join("\n\n");
-      const textParts: MessagePart[] = text
-        ? [{ type: "text", text }]
-        : fileParts.length === 0
-          ? [{ type: "text", text: "แนบไฟล์" }]
-          : [];
+      const textParts: MessagePart[] = text ? [{ type: "text", text }] : [];
       const sourceParts: MessagePart[] = (sourcesByMessage.get(message.id) ?? []).map((source) => ({
         type: "source-url" as const,
         sourceId: source.sourceId,

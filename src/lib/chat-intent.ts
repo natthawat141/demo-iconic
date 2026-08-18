@@ -14,6 +14,7 @@ const identityPattern = /^(คุณคือใคร|เธอคือใค�
 const overviewPattern = /(ภาพรวม.*knowledge|knowledge.*ภาพรวม|สรุป.*knowledge|knowledge.*สรุป|dashboard|สถิติ.*knowledge|knowledge.*(?:chart|graph|กราฟ|แผนภูมิ)|(?:chart|graph|กราฟ|แผนภูมิ).*knowledge)/iu;
 const visualizationPattern = /(chart|graph|กราฟ|แผนภูมิ|visuali[sz]e|แนวโน้ม)/iu;
 const explicitWebPattern = /(ค้น(?:หา)?|เสิร์ช|search|ดู).{0,20}(เว็บ|อินเทอร์เน็ต|internet|web|ออนไลน์)|(?:เว็บ|อินเทอร์เน็ต|internet|web).{0,20}(ค้น(?:หา)?|เสิร์ช|search)/iu;
+const publicProfilePattern = /(?:ค้น(?:หา)?|เสิร์ช|search).{0,100}(?:คือใคร|ประวัติ|who is)/iu;
 const freshPublicInfoPattern = /(?:ข่าว|ราคา|หุ้น|ตลาด|อากาศ|เทรนด์|เทคโนโลยี|บริษัท|ผลิตภัณฑ์|กฎหมาย|ประกาศ|next\.js|react).{0,40}(?:ล่าสุด|วันนี้|ตอนนี้|ปัจจุบัน|current|latest|today)|(?:ล่าสุด|วันนี้|ตอนนี้|ปัจจุบัน|current|latest|today).{0,40}(?:ข่าว|ราคา|หุ้น|ตลาด|อากาศ|เทรนด์|เทคโนโลยี|บริษัท|ผลิตภัณฑ์|กฎหมาย|ประกาศ|next\.js|react)/iu;
 const internalContextPattern = /(iconic|น้องฟ้า|knowledge|ทีม(?:เรา)?|ของเรา|ของระบบเรา|ระบบ(?:ของ)?(?:เรา|ทีม)|ลูกค้า|กรมธรรม์|แนวทางขาย|ติดตามลูกค้า|หัวหน้าทีม)/iu;
 const generalDefinitionPattern = /^(api|apis|ฐานข้อมูล|database|rag|vector database|markdown|excel|csv)\s*(คืออะไร|คืออะไรครับ|คืออะไรคะ|หมายความว่าอะไร|what is)/iu;
@@ -46,7 +47,7 @@ export function conversationalReply(message: string) {
 export function classifyChatIntent(message: string, previousContext = ""): ChatIntent {
   const normalized = normalizeMessage(message);
   if (conversationalReply(message)) return "smalltalk";
-  if (explicitWebPattern.test(normalized) || freshPublicInfoPattern.test(normalized)) return "web";
+  if (explicitWebPattern.test(normalized) || publicProfilePattern.test(normalized) || freshPublicInfoPattern.test(normalized)) return "web";
   if (overviewPattern.test(normalized)) return "overview";
   if (visualizationPattern.test(normalized)) return "visualize";
   if (generalDefinitionPattern.test(normalized)) return "general";

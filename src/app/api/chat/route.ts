@@ -187,14 +187,30 @@ function writeFileAnalyses(
 }
 
 function writeText(writer: { write: (chunk: UIMessageChunk) => void }, text: string) {
-  const id = crypto.randomUUID();
   // Custom UI streams do not create a start chunk automatically. Sending it
   // lets AI SDK give the browser the exact same assistant-message ID that we
   // persist, which also makes per-answer feedback addressable.
   writer.write({ type: "start" });
+  writeTextPart(writer, text);
+}
+
+function writeTextPart(writer: { write: (chunk: UIMessageChunk) => void }, text: string) {
+  const id = crypto.randomUUID();
   writer.write({ type: "text-start", id });
   writer.write({ type: "text-delta", id, delta: text });
   writer.write({ type: "text-end", id });
+}
+
+function directWebFallback(sources: WebSearchResult[], failure: string | null) {
+  if (failure) return failure;
+  if (sources.length === 0) {
+    return "น้องฟ้าค้นเว็บแล้ว แต่ยังไม่พบผลลัพธ์ที่ตรงพอจะตอบคำถามนี้ค่ะ ลองเพิ่มชื่อบริษัท ตำแหน่งงาน หรือบริบทที่ต้องการค้นอีกนิดนะคะ";
+  }
+  const findings = sources.slice(0, 3).map((source) => {
+    const excerpt = source.excerpt.replace(/\s+/g, " ").trim().slice(0, 360);
+    return `- **${source.title}**${excerpt ? ` — ${excerpt}` : ""}`;
+  });
+  return `น้องฟ้าค้นเว็บให้แล้วค่ะ แต่คำตอบสรุปหยุดก่อนแสดงผล จึงนำข้อมูลที่ค้นได้มาให้ตรวจโดยตรงก่อน:\n\n${findings.join("\n")}\n\nแหล่งข้อมูลเปิดดูได้ด้านล่างค่ะ`;
 }
 
 function writeSources(
@@ -373,6 +389,8 @@ export async function POST(request: Request) {
   });
   const usedSources: RetrievedKnowledge[] = [];
   const usedWebSources: WebSearchResult[] = [];
+  let knowledgeFallback: string | null = null;
+  let webSearchFailure: string | null = null;
 
   const tools = {
     rememberUserContext: tool({
@@ -405,6 +423,7 @@ export async function POST(request: Request) {
         const result = await searchKnowledge(query);
         if (result.matches.length > 0) {
           usedSources.push(...result.matches);
+          knowledgeFallback = `น้องฟ้าพบข้อมูลใน Knowledge ที่อนุมัติแล้วค่ะ:\n\n${result.matches.slice(0, 3).map(({ item, excerpt }) => `- **${item.title}** — ${excerpt.replace(/\s+/g, " ").trim().slice(0, 360)}`).join("\n")}`;
           return {
             found: true,
             query,
@@ -422,6 +441,7 @@ export async function POST(request: Request) {
         }
 
         const gapId = await recordKnowledgeGap(question);
+        knowledgeFallback = "น้องฟ้าลองเปิดคลังความรู้แล้ว แต่ยังไม่มีข้อมูลที่ตอบคำถามนี้ได้ตรงๆ ค่ะ ระบบบันทึกเป็น Knowledge Gap ไว้ให้ทีมตรวจต่อแล้ว";
         return {
           found: false,
           query,
@@ -463,6 +483,7 @@ export async function POST(request: Request) {
       }),
       execute: async ({ query }) => {
         if (!getTavilyApiKey()) {
+          webSearchFailure = "ตอนนี้ระบบค้นเว็บยังไม่ได้เปิดใช้งานค่ะ กรุณาตั้งค่า TAVILY_API_KEY แล้วลองอีกครั้ง";
           return {
             available: false,
             message: "ยังไม่ได้เปิดการค้นเว็บในระบบนี้",
@@ -479,6 +500,7 @@ export async function POST(request: Request) {
             results,
           };
         } catch {
+          webSearchFailure = "ค้นเว็บไม่สำเร็จในขณะนี้ค่ะ กรุณาลองอีกครั้ง หรือระบุคำค้นให้เจาะจงขึ้น";
           return {
             available: false,
             message: "ค้นเว็บไม่สำเร็จในขณะนี้ กรุณาลองใหม่",
@@ -547,10 +569,21 @@ ${memoryContext(relevantMemories) || "- ไม่มีบริบทที่�
       });
 
       const reader = result.toUIMessageStream({ sendReasoning: false }).getReader();
+      let emittedText = false;
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
+        if (value.type === "text-delta" && value.delta.trim()) emittedText = true;
         writer.write(value);
+      }
+      const needsTextReply = intent !== "overview" && intent !== "visualize";
+      if (needsTextReply && !emittedText) {
+        const fallback = intent === "web"
+          ? directWebFallback(usedWebSources, webSearchFailure)
+          : intent === "knowledge"
+            ? knowledgeFallback ?? "ขอโทษค่ะ คำตอบหยุดก่อนแสดงผล กรุณาลองส่งคำถามอีกครั้งนะคะ"
+            : "ขอโทษค่ะ คำตอบหยุดก่อนแสดงผล กรุณาลองส่งคำถามอีกครั้งนะคะ";
+        writeTextPart(writer, fallback);
       }
       try {
         const usage = await result.usage;

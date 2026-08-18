@@ -122,12 +122,7 @@ const ThreadRoot: FC<Pick<ThreadProps, "voice"> & { isEmpty: boolean }> = ({ isE
           <div data-slot="aui_message-group" className="mb-24 flex flex-col gap-y-6 empty:hidden">
             <ThreadPrimitive.Messages>{() => <ThreadMessage />}</ThreadPrimitive.Messages>
           </div>
-          <AuiIf condition={(state) => state.thread.isRunning}>
-            <div className="mb-4 flex items-center gap-2 px-1 text-xs text-muted-foreground" role="status">
-              <AiLoader label="กำลังตอบคำถาม" />
-              <span>กำลังคิดและตรวจข้อมูล...</span>
-            </div>
-          </AuiIf>
+          <ThreadActivity />
           <ThreadPrimitive.ViewportFooter
             className={cn(
               "aui-thread-viewport-footer flex flex-col gap-4 overflow-visible pb-4 md:pb-6",
@@ -158,6 +153,28 @@ const ThreadScrollToBottom: FC = () => (
     <ArrowDownIcon />
   </ThreadPrimitive.ScrollToBottom>
 );
+
+const ThreadActivity: FC = () => {
+  const label = useAuiState((state) => {
+    if (!state.thread.isRunning) return null;
+    const latest = state.thread.messages.at(-1);
+    if (latest?.role !== "assistant") return "กำลังเตรียมคำตอบ...";
+    const toolCall = [...latest.content].reverse().find((part) => part.type === "tool-call");
+    if (!toolCall) return "กำลังคิดและตรวจข้อมูล...";
+    if (toolCall.result !== undefined) return "กำลังสรุปคำตอบ...";
+    if (toolCall.toolName === "searchWeb") return "กำลังค้นข้อมูลบนเว็บ...";
+    if (toolCall.toolName === "searchKnowledge") return "กำลังเปิดคลังความรู้...";
+    if (toolCall.toolName === "showKnowledgeOverview" || toolCall.toolName === "renderChart") return "กำลังสร้างกราฟ...";
+    return "กำลังประมวลผลข้อมูล...";
+  });
+  if (!label) return null;
+  return (
+    <div className="mb-4 flex items-center gap-2 px-1 text-xs text-muted-foreground" role="status" aria-live="polite">
+      <AiLoader decorative label={label} />
+      <span>{label}</span>
+    </div>
+  );
+};
 
 const ThreadWelcome: FC = () => (
   <div className="aui-thread-welcome-root mb-5 text-center">
@@ -225,7 +242,17 @@ const MessageError: FC = () => (
 const AssistantMessage: FC = () => {
   const { ToolFallback: ToolFallbackComponent = ToolFallback, ToolGroup, ReasoningGroup } = useContext(ThreadComponentsContext);
   const hasRenderableContent = useAuiState((state) => state.message.content.some((part) => part.type !== "reasoning"));
-  if (!hasRenderableContent) return null;
+  const status = useAuiState((state) => state.message.role === "assistant" ? state.message.status.type : "complete");
+  if (!hasRenderableContent && status === "running") return null;
+  if (!hasRenderableContent) {
+    return (
+      <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="py-1">
+        <div role="alert" className="max-w-[75ch] rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          คำตอบหยุดก่อนแสดงผล กรุณาลองส่งข้อความอีกครั้งค่ะ
+        </div>
+      </MessagePrimitive.Root>
+    );
+  }
   return (
     <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="fade-in slide-in-from-bottom-1 animate-in relative py-1 duration-150">
       <div data-slot="aui_assistant-message-content" className="max-w-[75ch] text-foreground leading-relaxed wrap-break-word">
@@ -242,7 +269,7 @@ const AssistantMessage: FC = () => {
               case "group-tool":
                 if (ToolGroup) return <ToolGroup group={part}>{children}</ToolGroup>;
                 return part.status.type === "running"
-                  ? <p className="my-2 flex items-center gap-2 text-xs text-muted-foreground"><AiLoader label="กำลังค้นข้อมูล" />กำลังค้นข้อมูล...</p>
+                  ? <p className="my-2 flex items-center gap-2 text-xs text-muted-foreground" role="status"><AiLoader decorative label="กำลังค้นข้อมูล" />กำลังค้นข้อมูล...</p>
                   : <div data-slot="aui_tool-group">{children}</div>;
               case "group-reasoning": {
                 if (ReasoningGroup) return <ReasoningGroup group={part}>{children}</ReasoningGroup>;

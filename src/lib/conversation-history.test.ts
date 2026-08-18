@@ -92,4 +92,15 @@ describe("conversation history", () => {
     }]);
     expect(messages.flatMap((message) => message.parts).some((part) => part.type === "data-tabular-analysis")).toBe(false);
   });
+
+  it("does not fabricate an attachment label for an empty assistant response", async () => {
+    const detail = conversationDetail();
+    detail.messages[0]!.attachments = [];
+    detail.messages[1]!.content = "";
+    detail.sources = [];
+
+    const messages = await toHistoryMessages(detail, async () => uploadedFile());
+
+    expect(messages[1]?.parts).toEqual([]);
+  });
 });

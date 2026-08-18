@@ -46,6 +46,7 @@ describe("chat intent routing", () => {
     "ช่วยค้นเว็บว่า Next.js รุ่นล่าสุดคืออะไร",
     "ข่าวเทคโนโลยีล่าสุดวันนี้",
     "search the web for current React release",
+    "ค้นหาข้อมูล bill natthawat sawatdee ว่าเขาคือใคร",
   ])("routes fresh public information to Tavily: %s", (message) => {
     expect(classifyChatIntent(message)).toBe("web");
   });
