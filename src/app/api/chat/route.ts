@@ -210,7 +210,7 @@ function directWebFallback(sources: WebSearchResult[], failure: string | null) {
     const excerpt = source.excerpt.replace(/\s+/g, " ").trim().slice(0, 360);
     return `- **${source.title}**${excerpt ? ` — ${excerpt}` : ""}`;
   });
-  return `น้องฟ้าค้นเว็บให้แล้วค่ะ แต่คำตอบสรุปหยุดก่อนแสดงผล จึงนำข้อมูลที่ค้นได้มาให้ตรวจโดยตรงก่อน:\n\n${findings.join("\n")}\n\nแหล่งข้อมูลเปิดดูได้ด้านล่างค่ะ`;
+  return `น้องฟ้าค้นเว็บให้แล้วค่ะ จากผลลัพธ์ที่พบ มีข้อมูลเบื้องต้นดังนี้:\n\n${findings.join("\n")}\n\nเปิดแหล่งข้อมูลด้านล่างเพื่อดูรายละเอียดเพิ่มได้ค่ะ`;
 }
 
 function directGeneralFallback(question: string) {
