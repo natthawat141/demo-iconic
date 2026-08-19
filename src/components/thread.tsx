@@ -46,6 +46,7 @@ import {
   CopyIcon,
   DownloadIcon,
   MicIcon,
+  LoaderCircle,
   MoreHorizontalIcon,
   PencilIcon,
   RefreshCwIcon,
@@ -272,15 +273,15 @@ const AssistantMessage: FC = () => {
   }
   return (
     <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="fade-in slide-in-from-bottom-1 animate-in relative py-1 duration-150">
-      {activityLabel ? (
-        <div className="mb-2 flex min-h-7 items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
-          <NongFahSaiMascot variant="avatar" className="size-7 shrink-0 rounded-full bg-muted" />
-          <span>{activityLabel}</span>
-        </div>
-      ) : null}
       <div className="flex items-start gap-2.5 sm:gap-3">
         <NongFahSaiMascot variant="avatar" className="mt-0.5 size-8 shrink-0 rounded-full bg-muted" />
         <div data-slot="aui_assistant-message-content" className="min-w-0 max-w-[75ch] text-foreground leading-relaxed wrap-break-word">
+          {activityLabel ? (
+            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+              <LoaderCircle className="size-3.5 animate-spin text-primary" />
+              <span>{activityLabel}</span>
+            </div>
+          ) : null}
           <MessagePrimitive.GroupedParts
             groupBy={groupPartByType({
               reasoning: ["group-chainOfThought", "group-reasoning"],
