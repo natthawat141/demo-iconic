@@ -4,6 +4,7 @@ import type { UIMessage } from "ai";
 
 import { activityStorage } from "@/db/activity-storage";
 import type { ConversationDetail, StoredAttachment, StoredFileAttachment, UploadedFile } from "@/db/activity-types";
+import { chartFromQuestion } from "@/lib/conversation-chart";
 import type { ConversationChartData, TabularAnalysisData } from "@/lib/demo-types";
 
 type FileResolver = (id: string) => Promise<UploadedFile | null>;
@@ -37,10 +38,12 @@ export async function toHistoryMessages(
     .filter((file): file is UploadedFile => file?.userId === detail.conversation.userId)
     .map((file) => [file.id, file]));
   let pendingAnalysisParts: MessagePart[] = [];
+  let pendingQuestionChart = null as ReturnType<typeof chartFromQuestion>;
 
   const history = detail.messages
     .filter((message) => message.role !== "system")
     .map((message) => {
+      if (message.role === "user") pendingQuestionChart = chartFromQuestion(message.content);
       const fileParts: MessagePart[] = [];
       const chartParts: MessagePart[] = [];
       const unresolvedAttachmentSummary: string[] = [];
@@ -80,6 +83,13 @@ export async function toHistoryMessages(
         }
       }
 
+      if (message.role === "assistant" && chartParts.length === 0 && pendingQuestionChart) {
+        chartParts.push({
+          type: "data-conversation-chart",
+          data: { chart: pendingQuestionChart } satisfies ConversationChartData,
+        } as MessagePart);
+      }
+
       const text = [message.content, unresolvedAttachmentSummary.join("\n")]
         .filter(Boolean)
         .join("\n\n");
@@ -92,7 +102,10 @@ export async function toHistoryMessages(
       }));
 
       const analysisParts = message.role === "assistant" ? pendingAnalysisParts : [];
-      if (message.role === "assistant") pendingAnalysisParts = [];
+      if (message.role === "assistant") {
+        pendingAnalysisParts = [];
+        pendingQuestionChart = null;
+      }
 
       return {
         id: message.id,

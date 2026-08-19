@@ -123,4 +123,23 @@ describe("conversation history", () => {
       data: { chart: { title: "กราฟเส้นยอดขาย" } },
     });
   });
+
+  it("recovers a legacy chart from explicit values in its user question", async () => {
+    const detail = conversationDetail();
+    detail.messages[0]!.content = "สร้างกราฟเส้นยอดขาย: ม.ค. = 120, ก.พ. = 240";
+    detail.messages[0]!.attachments = [];
+    detail.messages[1]!.attachments = [];
+
+    const messages = await toHistoryMessages(detail, async () => uploadedFile());
+
+    expect(messages[1]?.parts[0]).toMatchObject({
+      type: "data-conversation-chart",
+      data: {
+        chart: {
+          kind: "line",
+          points: [{ label: "ม.ค.", value: 120 }, { label: "ก.พ.", value: 240 }],
+        },
+      },
+    });
+  });
 });
