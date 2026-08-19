@@ -13,5 +13,7 @@ tsconfig.tsbuildinfo
 .gemini
 .impeccable
 outputs
+output
 tmp
+
 

@@ -57,5 +57,7 @@ next-env.d.ts
 
 # local outputs
 /outputs/
+/output/
 /tmp/
+
 

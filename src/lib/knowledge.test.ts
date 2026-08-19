@@ -36,6 +36,9 @@ describe("knowledge demo workflow", () => {
     ["พนักงานใหม่วันแรกต้องทำอะไรบ้าง", "km-new-hire-day-one"],
     ["ทำโน้ตบุ๊กบริษัทหายต้องแจ้งใคร", "km-lost-device-response"],
     ["ส่งไฟล์ Excel ให้ช่วยวิเคราะห์ต้องเตรียมอะไร", "km-data-analysis-request"],
+    ["แพ็กเกจ Health Secure Plus มีอะไรบ้าง", "km-mockup-insurance-health-secure-plus"],
+    ["เคลมค่ารักษาต้องเตรียมเอกสารอะไร", "km-mockup-insurance-medical-claim"],
+    ["กรอกแบบฟอร์มเคลมต้องเช็กอะไร", "km-mockup-insurance-claim-form"],
   ])("ranks Thai query %s to %s", async (question, expectedId) => {
     const results = await retrieveKnowledge(question);
     expect(results[0]?.item.id).toBe(expectedId);
