@@ -339,13 +339,13 @@ export function KnowledgeForm({ item }: { item?: KnowledgeItemDto }) {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-5">
         <div>
           <Button
-            render={<Link href="/knowledge" />}
+            render={<Link href={isNew ? "/knowledge" : `/knowledge/${item.id}`} />}
             nativeButton={false}
             variant="ghost"
             size="sm"
             className="mb-2 -ml-2 text-muted-foreground"
           >
-            <ArrowLeft className="size-4" /> กลับไปคลังความรู้
+            <ArrowLeft className="size-4" /> {isNew ? "กลับไปคลังความรู้" : "กลับไปดู Knowledge"}
           </Button>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-balance text-2xl font-bold tracking-[-0.02em]">

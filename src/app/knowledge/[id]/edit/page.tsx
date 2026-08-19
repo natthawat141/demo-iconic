@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 
-import { KnowledgeDetailView } from "@/components/knowledge-detail-view";
+import { KnowledgeForm } from "@/components/knowledge-form";
 import { storage } from "@/db/storage";
 import { serializeKnowledge } from "@/lib/serializers";
 
 export const dynamic = "force-dynamic";
 
-export default async function KnowledgeDetailPage({
+export default async function KnowledgeEditPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -14,5 +14,5 @@ export default async function KnowledgeDetailPage({
   const { id } = await params;
   const item = await storage.getKnowledge(id);
   if (!item) notFound();
-  return <KnowledgeDetailView item={serializeKnowledge(item)} />;
+  return <KnowledgeForm item={serializeKnowledge(item)} />;
 }
