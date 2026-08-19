@@ -9,9 +9,9 @@ function contentDisposition(filename: string) {
 
 export async function GET(request: Request, context: RouteContext<"/api/uploads/[id]/content">) {
   const { id } = await context.params;
-  const { userId, setCookie } = await getDemoUserForRequest(request);
+  const { setCookie } = await getDemoUserForRequest(request);
   const file = await activityStorage.getUploadedFile(id);
-  if (!file || file.userId !== userId) {
+  if (!file) {
     return withDemoSessionCookie(Response.json({ error: "ไม่พบไฟล์" }, { status: 404 }), setCookie);
   }
 

@@ -73,7 +73,7 @@ POSTGRES_USER=iconic_app
 POSTGRES_PASSWORD=<Secret Manager>
 ```
 
-ระบบเลือก storage ตามลำดับ PostgreSQL → optional MySQL compatibility → local SQLite รายละเอียด resource และวิธีตรวจฐานอยู่ที่ [docs/GCP_CLOUD_SQL.md](./docs/GCP_CLOUD_SQL.md)
+ระบบเลือก storage ตามลำดับ: GCP Cloud SQL PostgreSQL (Production) → local SQLite (Development/Offline). รายละเอียด resource และวิธีตรวจฐานอยู่ที่ [docs/GCP_CLOUD_SQL.md](./docs/GCP_CLOUD_SQL.md)
 
 ## ตรวจคุณภาพ
 

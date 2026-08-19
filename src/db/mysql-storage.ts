@@ -1,3 +1,13 @@
+/**
+ * @deprecated
+ * Legacy MySQL Storage Adapter (Technical Debt / Inactive)
+ * 
+ * Notice: This adapter is retained solely for historical compatibility reference.
+ * The production system standard is Google Cloud SQL (PostgreSQL with pgvector),
+ * and local offline developer testing uses SQLite (sqlite-storage.ts).
+ * This module is not imported or resolved in active application runtime.
+ */
+
 import {
   createPool,
   type Pool,

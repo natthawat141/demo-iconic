@@ -10,6 +10,7 @@ function normalizeMessage(value: string) {
 const greetingPattern = /^(hi|hello|hey|yo|สวัสดี|หวัดดี|ดีครับ|ดีค่ะ|ดีคะ|สวัสดีครับ|สวัสดีค่ะ)$/iu;
 const thanksPattern = /^(ขอบคุณ|ขอบคุณครับ|ขอบคุณค่ะ|thanks|thank you|โอเค|ok|okay)$/iu;
 const helpPattern = /^(ช่วยอะไรได้บ้าง|ทำอะไรได้บ้าง|คุณทำอะไรได้บ้าง|ใช้ยังไง|how can you help|what can you do)$/iu;
+const workplaceHelpPattern = /(?:อะไร|ข้อมูล).{0,20}(?:ใช้(?:ได้)?|ทำ(?:ได้)?|จัดการ).{0,20}(?:ระบบ|ทีม)|(?:ระบบ|ทีม).{0,20}(?:ใช้(?:ได้)?|ทำ(?:ได้)?|จัดการ).{0,20}(?:อะไร|งาน)/iu;
 const identityPattern = /^(คุณคือใคร|เธอคือใคร|น้องฟ้าคือใคร|who are you|what are you)$/iu;
 const overviewPattern = /(ภาพรวม.*knowledge|knowledge.*ภาพรวม|สรุป.*knowledge|knowledge.*สรุป|dashboard|สถิติ.*knowledge|knowledge.*(?:chart|graph|กราฟ|แผนภูมิ)|(?:chart|graph|กราฟ|แผนภูมิ).*knowledge)/iu;
 const visualizationPattern = /(chart|graph|กราฟ|แผนภูมิ|visuali[sz]e|แนวโน้ม)/iu;
@@ -20,6 +21,20 @@ const freshPublicInfoPattern = /(?:ข่าว|ราคา|หุ้น|ตล
 const internalContextPattern = /(iconic|น้องฟ้า|knowledge|ทีม(?:เรา)?|ของเรา|ของระบบเรา|ระบบ(?:ของ)?(?:เรา|ทีม)|ลูกค้า|กรมธรรม์|แนวทางขาย|ติดตามลูกค้า|หัวหน้าทีม)/iu;
 const generalDefinitionPattern = /^(api|apis|ฐานข้อมูล|database|rag|vector database|markdown|excel|csv)\s*(คืออะไร|คืออะไรครับ|คืออะไรคะ|หมายความว่าอะไร|what is)/iu;
 const ambiguousWorkPattern = /^(?:แล้ว\s*)?(api|ขั้นตอน|นโยบาย|ข้อมูล|ระบบ|knowledge)\s*(ล่ะ|คืออะไร|หมายถึงอะไร|ยังไง)?$/iu;
+
+function workplaceHelpReply() {
+  return `น้องฟ้าช่วยงานที่ทีมต้องทำต่อได้ เช่น
+
+- **ติดตามลูกค้า** — ร่างข้อความ follow-up และดูแนวทางเมื่อยังไม่ได้รับคำตอบ
+- **เตรียมคุยกับลูกค้า** — สรุปข้อมูลหรือเช็กลิสต์ก่อนพบลูกค้า
+- **รับมือคำถามและข้อกังวล** — ค้นแนวทางตอบจาก Knowledge ที่ทีมอนุมัติแล้ว
+- **งานเอกสารและเบิกจ่าย** — ดูขั้นตอน เอกสารที่ต้องแนบ และเงื่อนไขที่เกี่ยวข้อง
+- **Onboarding ทีม** — เช็กสิ่งที่พนักงานใหม่ต้องเตรียมในวันแรก
+- **วิเคราะห์ไฟล์งาน** — แนบ Excel หรือ CSV แล้วให้สรุปแนวโน้มและสร้างกราฟได้
+- **ค้นเอกสาร** — แนบ PDF หรือรูป แล้วถามเฉพาะประเด็นที่ต้องการได้
+
+ลองเริ่มจาก “ลูกค้าไม่ตอบหลังส่งแผน ควรติดตามอย่างไร” หรือ “ช่วยสรุปค่าใช้จ่ายจากไฟล์นี้” ได้เลยค่ะ`;
+}
 
 export type ChatIntent = "smalltalk" | "general" | "knowledge" | "overview" | "visualize" | "web" | "ambiguous";
 
@@ -34,8 +49,8 @@ export function conversationalReply(message: string) {
     return "ยินดีค่ะ ถ้ามีคำถามต่อ ลองพิมพ์สถานการณ์หรือขั้นตอนที่ต้องการค้นหาได้เลยนะคะ";
   }
 
-  if (helpPattern.test(normalized)) {
-    return "น้องฟ้าช่วยค้นและสรุปความรู้ที่ทีมอนุมัติแล้ว พร้อมเปิดแหล่งข้อมูลให้ตรวจสอบได้ ถ้าคำถามยังไม่มีคำตอบตรงๆ จะบอกตามจริง แนะนำเรื่องที่ใกล้เคียง และส่งต่อเป็น Knowledge Gap ให้ทีมจัดการค่ะ";
+  if (helpPattern.test(normalized) || workplaceHelpPattern.test(normalized)) {
+    return workplaceHelpReply();
   }
 
   if (identityPattern.test(normalized)) {

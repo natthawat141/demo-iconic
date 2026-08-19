@@ -10,6 +10,7 @@ import { ThreadFollowupSuggestions } from "@/components/follow-up-suggestions";
 import { Image } from "@/components/image";
 import { MarkdownText } from "@/components/markdown-text";
 import { KnowledgeSource } from "@/components/knowledge-source";
+import { NongFahSaiMascot } from "@/components/nong-fah-sai-mascot";
 import {
   Reasoning,
   ReasoningContent,
@@ -19,7 +20,6 @@ import {
 } from "@/components/reasoning";
 import { ToolFallback } from "@/components/tool-fallback";
 import { TooltipIconButton } from "@/components/tooltip-icon-button";
-import { AiLoader } from "@/components/ui/ai-loader";
 import { Button } from "@/components/ui/button";
 import { VoiceConversation } from "@/components/voice-conversation";
 import { cn } from "@/lib/utils";
@@ -163,7 +163,7 @@ const ThreadActivity: FC = () => {
   if (!label) return null;
   return (
     <div className="mb-4 flex items-center gap-2 px-1 text-xs text-muted-foreground" role="status" aria-live="polite">
-      <AiLoader decorative label={label} />
+      <NongFahSaiMascot variant="avatar" className="size-7 shrink-0 rounded-full bg-muted" />
       <span>{label}</span>
     </div>
   );
@@ -184,8 +184,9 @@ function useAssistantActivityLabel() {
 
 const ThreadWelcome: FC = () => (
   <div className="aui-thread-welcome-root mb-5 text-center">
+    <NongFahSaiMascot variant="welcome" priority className="mx-auto mb-3 w-32 sm:w-36" />
     <h1 className="aui-thread-welcome-message-inner text-balance text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
-      วันนี้ให้ช่วยอะไรดี?
+      วันนี้ให้น้องฟ้าช่วยอะไรดี?
     </h1>
     <p className="mx-auto mt-2 max-w-[40ch] text-sm leading-6 text-muted-foreground">
       ถามน้องฟ้าได้เลย ระบบจะค้น Knowledge ของทีมเมื่อจำเป็น
@@ -255,7 +256,7 @@ const AssistantMessage: FC = () => {
       return (
         <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="py-1">
           <div className="flex min-h-7 items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
-            <AiLoader decorative label={activityLabel ?? "กำลังเตรียมคำตอบ"} />
+            <NongFahSaiMascot variant="avatar" className="size-7 shrink-0 rounded-full bg-muted" />
             <span>{activityLabel ?? "กำลังเตรียมคำตอบ..."}</span>
           </div>
         </MessagePrimitive.Root>
@@ -273,42 +274,45 @@ const AssistantMessage: FC = () => {
     <MessagePrimitive.Root data-slot="aui_assistant-message-root" data-role="assistant" className="fade-in slide-in-from-bottom-1 animate-in relative py-1 duration-150">
       {activityLabel ? (
         <div className="mb-2 flex min-h-7 items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
-          <AiLoader decorative label={activityLabel} />
+          <NongFahSaiMascot variant="avatar" className="size-7 shrink-0 rounded-full bg-muted" />
           <span>{activityLabel}</span>
         </div>
       ) : null}
-      <div data-slot="aui_assistant-message-content" className="max-w-[75ch] text-foreground leading-relaxed wrap-break-word">
-        <MessagePrimitive.GroupedParts
-          groupBy={groupPartByType({
-            reasoning: ["group-chainOfThought", "group-reasoning"],
-            "tool-call": ["group-chainOfThought", "group-tool"],
-            "standalone-tool-call": [],
-          })}
-        >
-          {({ part, children }) => {
-            switch (part.type) {
-              case "group-chainOfThought": return <div data-slot="aui_chain-of-thought">{children}</div>;
-              case "group-tool":
-                if (part.status.type === "running") return null;
-                if (ToolGroup) return <ToolGroup group={part}>{children}</ToolGroup>;
-                return <div data-slot="aui_tool-group">{children}</div>;
-              case "group-reasoning": {
-                if (ReasoningGroup) return <ReasoningGroup group={part}>{children}</ReasoningGroup>;
-                const running = part.status.type === "running";
-                return <ReasoningRoot streaming={running}><ReasoningTrigger active={running} /><ReasoningContent aria-busy={running}><ReasoningText>{children}</ReasoningText></ReasoningContent></ReasoningRoot>;
+      <div className="flex items-start gap-2.5 sm:gap-3">
+        <NongFahSaiMascot variant="avatar" className="mt-0.5 size-8 shrink-0 rounded-full bg-muted" />
+        <div data-slot="aui_assistant-message-content" className="min-w-0 max-w-[75ch] text-foreground leading-relaxed wrap-break-word">
+          <MessagePrimitive.GroupedParts
+            groupBy={groupPartByType({
+              reasoning: ["group-chainOfThought", "group-reasoning"],
+              "tool-call": ["group-chainOfThought", "group-tool"],
+              "standalone-tool-call": [],
+            })}
+          >
+            {({ part, children }) => {
+              switch (part.type) {
+                case "group-chainOfThought": return <div data-slot="aui_chain-of-thought">{children}</div>;
+                case "group-tool":
+                  if (part.status.type === "running") return null;
+                  if (ToolGroup) return <ToolGroup group={part}>{children}</ToolGroup>;
+                  return <div data-slot="aui_tool-group">{children}</div>;
+                case "group-reasoning": {
+                  if (ReasoningGroup) return <ReasoningGroup group={part}>{children}</ReasoningGroup>;
+                  const running = part.status.type === "running";
+                  return <ReasoningRoot streaming={running}><ReasoningTrigger active={running} /><ReasoningContent aria-busy={running}><ReasoningText>{children}</ReasoningText></ReasoningContent></ReasoningRoot>;
+                }
+                case "text": return <MarkdownText />;
+                case "source": return <KnowledgeSource {...part} />;
+                case "reasoning": return <Reasoning {...part} />;
+                case "tool-call": return part.toolUI ?? <ToolFallbackComponent {...part} />;
+                case "data": return part.dataRendererUI;
+                case "file": return <div className="py-1"><File {...part} /></div>;
+                case "image": return <div className="py-1"><Image {...part} /></div>;
+                default: return null;
               }
-              case "text": return <MarkdownText />;
-              case "source": return <KnowledgeSource {...part} />;
-              case "reasoning": return <Reasoning {...part} />;
-              case "tool-call": return part.toolUI ?? <ToolFallbackComponent {...part} />;
-              case "data": return part.dataRendererUI;
-              case "file": return <div className="py-1"><File {...part} /></div>;
-              case "image": return <div className="py-1"><Image {...part} /></div>;
-              default: return null;
-            }
-          }}
-        </MessagePrimitive.GroupedParts>
-        <MessageError />
+            }}
+          </MessagePrimitive.GroupedParts>
+          <MessageError />
+        </div>
       </div>
       {status !== "running" ? (
         <div className="flex justify-end pt-1.5">

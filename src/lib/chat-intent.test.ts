@@ -18,6 +18,13 @@ describe("chat intent routing", () => {
     expect(conversationalReply("คุณคือใคร")).toContain("น้องฟ้า");
   });
 
+  it("shows team work instead of Knowledge inventory for a generic system-help question", () => {
+    const message = "ขอข้อมูลหน่อยอะไรที่ใช้ได้ในระบบ";
+    expect(conversationalReply(message)).toContain("ติดตามลูกค้า");
+    expect(conversationalReply(message)).toContain("วิเคราะห์ไฟล์งาน");
+    expect(classifyChatIntent(message)).toBe("smalltalk");
+  });
+
   it("keeps general definitions out of the team knowledge path", () => {
     expect(classifyChatIntent("API คืออะไร")).toBe("general");
   });

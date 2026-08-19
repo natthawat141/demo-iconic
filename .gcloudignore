@@ -12,3 +12,6 @@ tsconfig.tsbuildinfo
 .cursor
 .gemini
 .impeccable
+outputs
+tmp
+

@@ -1,18 +1,19 @@
 import "server-only";
 
-import { mysqlStorage } from "./mysql-storage";
 import { postgresStorage } from "./postgres-storage";
 import { isPostgresConfigured } from "./postgres-config";
 import { sqliteStorage } from "./sqlite-storage";
 
+// Storage provider resolution:
+// 1. GCP Cloud SQL PostgreSQL (production system of record with pgvector)
+// 2. Local SQLite (offline developer demo)
+// Note: Legacy MySQL adapter (mysql-storage.ts) has been deprecated and removed from active runtime.
 export const storage = isPostgresConfigured()
   ? postgresStorage
-  : process.env.MYSQL_URL?.trim()
-    ? mysqlStorage
-    : sqliteStorage;
+  : sqliteStorage;
 
 export function databaseLabel() {
   if (storage.provider === "postgres") return "GCP Cloud SQL · PostgreSQL";
-  if (storage.provider === "mysql") return "Oracle MySQL · Remote";
   return "SQLite · Local demo";
 }
+

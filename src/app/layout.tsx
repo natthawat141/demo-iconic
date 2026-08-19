@@ -28,9 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     process.env.DEMO_SAFE_MODE !== "true";
   const databaseLabel = isPostgresConfigured()
     ? "GCP Cloud SQL · PostgreSQL"
-    : process.env.MYSQL_URL
-      ? "Oracle MySQL · Remote"
-      : "SQLite · Local demo";
+    : "SQLite · Local demo";
 
   return (
     <html

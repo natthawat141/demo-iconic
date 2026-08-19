@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { NongFahSaiMascot } from "@/components/nong-fah-sai-mascot";
 
 type LibraryFile = {
   id: string;
@@ -161,7 +162,7 @@ export function UploadLibrary() {
       </div>
     </section>
     {files === null && !error ? <div className="mt-6 h-48 animate-pulse rounded-xl bg-muted" aria-label="กำลังโหลดคลังไฟล์" /> : null}
-    {files?.length === 0 ? <section className="mt-12 text-center"><ImageIcon className="mx-auto size-7 text-muted-foreground" /><h2 className="mt-3 text-base font-semibold">ยังไม่มีไฟล์ในคลัง</h2><p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">แนบรูป, Excel หรือ PDF จากช่องแชต แล้วไฟล์จะปรากฏที่นี่</p></section> : null}
+    {files?.length === 0 ? <section className="mt-10 text-center"><NongFahSaiMascot variant="library" className="mx-auto w-32 sm:w-36" /><h2 className="mt-1 text-base font-semibold">ยังไม่มีไฟล์ในคลัง</h2><p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">แนบรูป, Excel หรือ PDF จากช่องแชต แล้วไฟล์จะปรากฏที่นี่</p></section> : null}
     {images.length > 0 ? <section className="mt-7" aria-labelledby="library-images-title">
       <h2 id="library-images-title" className="text-sm font-semibold">รูปภาพ</h2>
       <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3">{images.map((file) => <figure key={file.id} className="group overflow-hidden rounded-xl border border-border bg-card">

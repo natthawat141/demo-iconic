@@ -21,8 +21,8 @@ export default function SettingsPage() {
     {
       icon: Database,
       label: "Database",
-      value: isPostgresConfigured() ? "GCP Cloud SQL · PostgreSQL" : process.env.MYSQL_URL ? "Oracle MySQL" : "SQLite local demo",
-      detail: isPostgresConfigured() ? "PostgreSQL + pgvector เป็น system of record" : process.env.MYSQL_URL ? "เชื่อมต่อผ่าน MYSQL_URL" : "ใช้ฐานในเครื่องสำหรับ development",
+      value: isPostgresConfigured() ? "GCP Cloud SQL · PostgreSQL" : "SQLite local demo",
+      detail: isPostgresConfigured() ? "PostgreSQL + pgvector เป็น system of record บน GCP Cloud SQL" : "ใช้ฐานในเครื่องสำหรับ development",
     },
     {
       icon: KeyRound,

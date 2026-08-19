@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { activityStorage } from "@/db/activity-storage";
 import type { StoredAttachment, StoredChartArtifact } from "@/db/activity-types";
 import { Button } from "@/components/ui/button";
+import { MarkdownContent } from "@/components/markdown-content";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,11 @@ export default async function AdminConversationDetailPage({
         {detail.messages.map((message) => (
           <article key={message.id} className={message.role === "user" ? "ml-auto max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-primary-foreground" : "max-w-[85%] rounded-2xl border border-border bg-card px-4 py-3"}>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-65">{message.role === "user" ? "Team member" : "Nong Fah"}</p>
-            <p className="whitespace-pre-wrap text-sm leading-6">{message.content || "(ไฟล์แนบ)"}</p>
+            {message.role === "user" ? (
+              <p className="whitespace-pre-wrap text-sm leading-6">{message.content || "(ไฟล์แนบ)"}</p>
+            ) : (
+              <MarkdownContent content={message.content || "(ไฟล์แนบ)"} className="text-sm leading-6" />
+            )}
             {message.attachments.map((attachment, index) => {
               if (isStoredChartArtifact(attachment)) {
                 return <p key={`${attachment.chart.title}-${index}`} className="mt-2 flex items-center gap-1.5 text-xs opacity-70"><FileText className="size-3" /> กราฟ: {attachment.chart.title} · {attachment.chart.points.length} จุดข้อมูล</p>;

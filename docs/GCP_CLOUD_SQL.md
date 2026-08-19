@@ -69,9 +69,9 @@ Service account ของ VM ต้องมีอย่างน้อย:
 
 ## ลำดับการเลือก storage ในแอป
 
-1. `POSTGRES_URL` — GCP Cloud SQL PostgreSQL (production)
-2. `MYSQL_URL` — Oracle MySQL compatibility
-3. ไม่มีทั้งสองค่า — SQLite local demo
+1. `POSTGRES_URL` / `POSTGRES_HOST` — GCP Cloud SQL PostgreSQL (production system of record พร้อม pgvector)
+2. ไม่มีค่าดังกล่าว — SQLite local demo (`data/demo.sqlite` สำหรับการพัฒนาในเครื่อง)
+*(หมายเหตุ: เลิกใช้งาน Oracle MySQL adapter เดิมแล้วเพื่อความเรียบง่ายของระบบ)*
 
 เมื่อ PostgreSQL เชื่อมต่อครั้งแรก แอปจะสร้างตารางและ seed demo data ให้อัตโนมัติ Embedding เก็บในคอลัมน์ชนิด `vector` ของ pgvector ปัจจุบันใช้ `openai/text-embedding-3-small` ขนาด 1,536 มิติ และมี HNSW cosine index ชื่อ `idx_chunks_embedding_hnsw`; หากเปลี่ยนโมเดล ระบบ rebuild chunks และ index ตาม dimension ใหม่
 
