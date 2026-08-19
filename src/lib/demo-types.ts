@@ -44,6 +44,14 @@ export type TabularAnalysisData = {
   };
 };
 
+export type ConversationChartData = {
+  chart: {
+    title: string;
+    kind: "bar" | "line";
+    points: Array<{ label: string; value: number }>;
+  };
+};
+
 export type KnowledgeItemDto = {
   id: string;
   title: string;

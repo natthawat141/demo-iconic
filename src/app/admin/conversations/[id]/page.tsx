@@ -3,9 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { activityStorage } from "@/db/activity-storage";
+import type { StoredAttachment, StoredChartArtifact } from "@/db/activity-types";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
+
+function isStoredChartArtifact(attachment: StoredAttachment): attachment is StoredChartArtifact {
+  return "type" in attachment && attachment.type === "chart";
+}
 
 export default async function AdminConversationDetailPage({
   params,
@@ -34,7 +39,12 @@ export default async function AdminConversationDetailPage({
           <article key={message.id} className={message.role === "user" ? "ml-auto max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-primary-foreground" : "max-w-[85%] rounded-2xl border border-border bg-card px-4 py-3"}>
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide opacity-65">{message.role === "user" ? "Team member" : "Nong Fah"}</p>
             <p className="whitespace-pre-wrap text-sm leading-6">{message.content || "(ไฟล์แนบ)"}</p>
-            {message.attachments.map((attachment, index) => <p key={`${attachment.filename}-${index}`} className="mt-2 flex items-center gap-1.5 text-xs opacity-70"><FileText className="size-3" /> {attachment.filename ?? "ไฟล์แนบ"} · {attachment.mediaType}</p>)}
+            {message.attachments.map((attachment, index) => {
+              if (isStoredChartArtifact(attachment)) {
+                return <p key={`${attachment.chart.title}-${index}`} className="mt-2 flex items-center gap-1.5 text-xs opacity-70"><FileText className="size-3" /> กราฟ: {attachment.chart.title} · {attachment.chart.points.length} จุดข้อมูล</p>;
+              }
+              return <p key={`${attachment.filename}-${index}`} className="mt-2 flex items-center gap-1.5 text-xs opacity-70"><FileText className="size-3" /> {attachment.filename ?? "ไฟล์แนบ"} · {attachment.mediaType}</p>;
+            })}
             {(sourcesByMessage.get(message.id) ?? []).map((source) => <Link key={source.sourceId} href={source.url} className="mt-2 block text-xs font-medium text-primary underline underline-offset-4">Source: {source.title}</Link>)}
             {feedbackByMessage.get(message.id) ? <p className="mt-2 text-xs opacity-70">Feedback: {feedbackByMessage.get(message.id)?.value === "up" ? "มีประโยชน์" : "ยังไม่ตรง"}</p> : null}
             <p className="mt-2 text-[10px] opacity-60">{message.createdAt.toLocaleString("th-TH")}</p>

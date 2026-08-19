@@ -71,6 +71,7 @@ export const VoiceConversation: FC<VoiceConversationProps> = ({ messages, status
   const [phase, setPhase] = useState<VoicePhase>("idle");
   const [caption, setCaption] = useState("");
   const [hasResponseError, setHasResponseError] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const restartTimerRef = useRef<number | null>(null);
   const beginListeningRef = useRef<() => void>(() => undefined);
@@ -88,9 +89,15 @@ export const VoiceConversation: FC<VoiceConversationProps> = ({ messages, status
     onSendRef.current = onSend;
   }, [onSend]);
 
-  const isSupported = typeof window !== "undefined" &&
-    typeof getSpeechRecognition() === "function" &&
-    typeof window.speechSynthesis !== "undefined";
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setIsSupported(
+        typeof getSpeechRecognition() === "function" &&
+        typeof window.speechSynthesis !== "undefined",
+      );
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const clearRestart = useCallback(() => {
     if (restartTimerRef.current != null) {

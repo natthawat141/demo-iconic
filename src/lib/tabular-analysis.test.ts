@@ -54,6 +54,20 @@ describe("tabular analysis", () => {
     });
   });
 
+  it("prefers a sales-value column over the first count column", () => {
+    const analysis = analyzeTabularData({
+      format: "csv",
+      content: "date,leads,revenue_thb\n2026-07-01,20,120000\n2026-07-08,25,180000\n",
+    });
+
+    expect(analysis.chart).toMatchObject({
+      kind: "line",
+      labelColumn: "date",
+      valueColumn: "revenue_thb",
+      points: [{ label: "2026-07-01", value: 120000 }, { label: "2026-07-08", value: 180000 }],
+    });
+  });
+
   it("keeps formatted Excel currency numeric for a trend chart", () => {
     const analysis = analyzeTabularData({
       format: "workbook",

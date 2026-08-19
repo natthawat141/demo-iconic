@@ -103,4 +103,24 @@ describe("conversation history", () => {
 
     expect(messages[1]?.parts).toEqual([]);
   });
+
+  it("restores a saved chart artifact with its assistant response", async () => {
+    const detail = conversationDetail();
+    detail.messages[0]!.attachments = [];
+    detail.messages[1]!.attachments = [{
+      type: "chart",
+      chart: {
+        title: "กราฟเส้นยอดขาย",
+        kind: "line",
+        points: [{ label: "ม.ค.", value: 120 }],
+      },
+    }];
+
+    const messages = await toHistoryMessages(detail, async () => uploadedFile());
+
+    expect(messages[1]?.parts[0]).toMatchObject({
+      type: "data-conversation-chart",
+      data: { chart: { title: "กราฟเส้นยอดขาย" } },
+    });
+  });
 });

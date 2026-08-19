@@ -3,11 +3,19 @@ import "server-only";
 import type { UIMessage } from "ai";
 
 import { activityStorage } from "@/db/activity-storage";
-import type { ConversationDetail, UploadedFile } from "@/db/activity-types";
-import type { TabularAnalysisData } from "@/lib/demo-types";
+import type { ConversationDetail, StoredAttachment, StoredFileAttachment, UploadedFile } from "@/db/activity-types";
+import type { ConversationChartData, TabularAnalysisData } from "@/lib/demo-types";
 
 type FileResolver = (id: string) => Promise<UploadedFile | null>;
 type MessagePart = UIMessage["parts"][number];
+
+function isStoredChart(attachment: StoredAttachment): attachment is Extract<StoredAttachment, { type: "chart" }> {
+  return "type" in attachment && attachment.type === "chart";
+}
+
+function isStoredFile(attachment: StoredAttachment): attachment is StoredFileAttachment {
+  return !isStoredChart(attachment);
+}
 
 export async function toHistoryMessages(
   detail: ConversationDetail,
@@ -21,6 +29,7 @@ export async function toHistoryMessages(
   }
 
   const fileIds = [...new Set(detail.messages.flatMap((message) => message.attachments)
+    .filter(isStoredFile)
     .map((attachment) => attachment.uploadedFileId)
     .filter((id): id is string => Boolean(id)))];
   const resolvedFiles = await Promise.all(fileIds.map(resolveFile));
@@ -33,9 +42,19 @@ export async function toHistoryMessages(
     .filter((message) => message.role !== "system")
     .map((message) => {
       const fileParts: MessagePart[] = [];
+      const chartParts: MessagePart[] = [];
       const unresolvedAttachmentSummary: string[] = [];
 
       for (const attachment of message.attachments) {
+        if (isStoredChart(attachment)) {
+          if (message.role === "assistant") {
+            chartParts.push({
+              type: "data-conversation-chart",
+              data: { chart: attachment.chart } satisfies ConversationChartData,
+            } as MessagePart);
+          }
+          continue;
+        }
         const file = attachment.uploadedFileId
           ? filesById.get(attachment.uploadedFileId)
           : null;
@@ -78,7 +97,7 @@ export async function toHistoryMessages(
       return {
         id: message.id,
         role: message.role,
-        parts: [...analysisParts, ...textParts, ...fileParts, ...sourceParts],
+        parts: [...analysisParts, ...chartParts, ...textParts, ...fileParts, ...sourceParts],
       } satisfies UIMessage;
     });
 

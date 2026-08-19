@@ -13,11 +13,20 @@ export type Conversation = {
   updatedAt: Date;
 };
 
-export type StoredAttachment = {
+import type { ConversationChart } from "@/lib/conversation-chart";
+
+export type StoredFileAttachment = {
   filename: string | null;
   mediaType: string;
   uploadedFileId: string | null;
 };
+
+export type StoredChartArtifact = {
+  type: "chart";
+  chart: ConversationChart;
+};
+
+export type StoredAttachment = StoredFileAttachment | StoredChartArtifact;
 
 export type ConversationMessage = {
   id: string;

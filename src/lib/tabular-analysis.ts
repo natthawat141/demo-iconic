@@ -264,7 +264,15 @@ function aggregateChart(
 }
 
 function recommendChart(summary: TabularSheetSummary, values: string[][]): ChartSpec | null {
-  const numericIndex = summary.columns.findIndex((column) => column.kind === "number");
+  const numericColumns = summary.columns
+    .map((column, index) => ({ column, index }))
+    .filter(({ column }) => column.kind === "number");
+  const numericIndex = numericColumns
+    .sort((left, right) => {
+      const importance = (name: string) => /revenue|sales|ยอดขาย|รายได้|amount|ยอดเงิน|ค่าใช้จ่าย|expense|budget|งบประมาณ/iu.test(name) ? 1 : 0;
+      return importance(right.column.name) - importance(left.column.name);
+    })
+    .at(0)?.index ?? -1;
   if (numericIndex === -1) return null;
   const dateIndex = summary.columns.findIndex((column) => column.kind === "date");
   if (dateIndex !== -1) return aggregateChart(dateIndex, numericIndex, values, "line", summary.columns);

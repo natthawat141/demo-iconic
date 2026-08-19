@@ -5,6 +5,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 
 import { activityStorage } from "@/db/activity-storage";
 import type { AnswerSource, ConversationMessage, StoredAttachment } from "@/db/activity-types";
+import { isConversationChart } from "@/lib/conversation-chart";
 
 export const DEMO_USER_COOKIE = "iconic_demo_user";
 const MAX_IDENTIFIER_LENGTH = 128;
@@ -29,7 +30,7 @@ function messageContent(message: UIMessage) {
 }
 
 function messageAttachments(message: UIMessage): StoredAttachment[] {
-  return message.parts
+  const files: StoredAttachment[] = message.parts
     .filter((part) => part.type === "file")
     .map((part) => ({
       filename: part.filename ?? null,
@@ -37,6 +38,13 @@ function messageAttachments(message: UIMessage): StoredAttachment[] {
       // Never store a data URL. Uploaded file metadata links the attachment later.
       uploadedFileId: UPLOAD_ID_PATTERN.test(part.url) ? part.url : null,
     }));
+  const charts: StoredAttachment[] = message.parts
+    .filter((part) => part.type === "data-conversation-chart")
+    .flatMap((part) => {
+      const chart = (part as { data?: { chart?: unknown } }).data?.chart;
+      return isConversationChart(chart) ? [{ type: "chart", chart }] : [];
+    });
+  return [...files, ...charts];
 }
 
 function toStoredMessage(message: UIMessage, conversationId: string): ConversationMessage {

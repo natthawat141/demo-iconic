@@ -22,9 +22,10 @@ import { CheckCircle2, Send, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Thread } from "@/components/thread";
+import { ConversationChart } from "@/components/knowledge-tool-ui";
 import { TabularAnalysisCard } from "@/components/tabular-analysis-card";
 import { Button } from "@/components/ui/button";
-import type { KnowledgeStateData, TabularAnalysisData } from "@/lib/demo-types";
+import type { ConversationChartData, KnowledgeStateData, TabularAnalysisData } from "@/lib/demo-types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -174,6 +175,14 @@ function FileAnalysisDataRenderer() {
   return null;
 }
 
+function ConversationChartDataRenderer() {
+  useAssistantDataUI({
+    name: "conversation-chart",
+    render: ({ data }: DataMessagePartProps<ConversationChartData>) => <ConversationChart result={data.chart} />,
+  });
+  return null;
+}
+
 type AssistantProps = {
   conversationId?: string;
   initialMessages: UIMessage[];
@@ -240,6 +249,7 @@ export const Assistant = ({ conversationId, initialMessages }: AssistantProps) =
     <AssistantRuntimeProvider runtime={runtime} config={AuiConfig({})}>
       <KnowledgeDataRenderer />
       <FileAnalysisDataRenderer />
+      <ConversationChartDataRenderer />
       <div className="h-[calc(100dvh-3.75rem)]">
         <Thread
           voice={{

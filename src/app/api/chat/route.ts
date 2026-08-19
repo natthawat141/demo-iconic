@@ -18,6 +18,7 @@ import {
   type ChatPersistence,
 } from "@/lib/chat-persistence";
 import { ambiguousContextReply, classifyChatIntent, conversationalReply } from "@/lib/chat-intent";
+import { chartFromQuestion } from "@/lib/conversation-chart";
 import { pdfPrompt, spreadsheetPrompt } from "@/lib/file-uploads";
 import {
   getKnowledgeOverview,
@@ -314,6 +315,9 @@ export async function POST(request: Request) {
 
   const intent = classifyChatIntent(question, previousUserContext(messages));
   const directReply = images.length === 0 && documents.length === 0 ? conversationalReply(question) : null;
+  const directChart = images.length === 0 && documents.length === 0 && intent === "visualize"
+    ? chartFromQuestion(question)
+    : null;
   const memoryCandidate = shouldOfferMemoryTool(question);
   const explicitMemory = explicitMemoryFromQuestion(question);
   if (explicitMemory) {
@@ -340,6 +344,20 @@ export async function POST(request: Request) {
     const stream = createUIMessageStream({
       originalMessages: messages,
       execute: async ({ writer }) => writeText(writer, ambiguousContextReply(question)),
+      onEnd: ({ responseMessage }) => persistence.persistAssistantResponse(responseMessage),
+    });
+    return withDemoSessionCookie(createUIMessageStreamResponse({ stream }), persistence.setCookie);
+  }
+  if (directChart) {
+    const stream = createUIMessageStream({
+      originalMessages: messages,
+      execute: async ({ writer }) => {
+        writer.write({
+          type: "data-conversation-chart",
+          data: { chart: directChart },
+        } as UIMessageChunk);
+        writeText(writer, `น้องฟ้าสร้าง${directChart.kind === "line" ? "กราฟเส้น" : "กราฟแท่ง"}จากข้อมูลที่ระบุให้แล้วค่ะ`);
+      },
       onEnd: ({ responseMessage }) => persistence.persistAssistantResponse(responseMessage),
     });
     return withDemoSessionCookie(createUIMessageStreamResponse({ stream }), persistence.setCookie);
